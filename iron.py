@@ -26,6 +26,13 @@ def get_instances(ec2):
             yield inst
 
 
+def wait_for_instance(ec2, instance_id):
+    """Wait for an EC2 instance to transition into running state.
+    """
+    waiter = ec2.get_waiter('instance_running')
+    waiter.wait(InstanceIds=[instance_id])
+
+
 def get_hb_instance(ec2):
     """Return an existing HammerBlade EC2 instance, if one exists.
     Otherwise, return None.
@@ -41,12 +48,29 @@ def get_running_instance(ec2):
     booting up an old one if necessary.
     """
     inst = get_hb_instance(ec2)
+
     if inst:
-        print('found existing instance {}'.format(inst['InstanceId']))
+        iid = inst['InstanceId']
+        print('found existing instance {}'.format(iid))
+
         if inst['State']['Code'] == State.RUNNING:
             return inst
+
         elif inst['State']['Code'] == State.STOPPED:
-            raise NotImplementedError("start the instance")
+            print('instance is stopped; starting')
+            r = ec2.start_instances(InstanceIds=[iid])
+            print(r)
+
+            print('waiting for instance to start')
+            wait_for_instance(iid)
+
+            return inst
+
+        else:
+            raise NotImplementedError(
+                "instance in unhandled state: {}".format(inst['State']['Name'])
+            )
+
     else:
         print('no existing instance')
         raise NotImplementedError("should launch a new instance here")
@@ -55,7 +79,7 @@ def get_running_instance(ec2):
 def iron():
     ec2 = boto3.client('ec2')
     inst = get_running_instance(ec2)
-    print(inst)
+    print(inst['PublicDnsName'])
 
 
 if __name__ == '__main__':
