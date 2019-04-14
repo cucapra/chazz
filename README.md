@@ -8,6 +8,23 @@ It's another [*Blades of Glory*][bog] reference.
 [bog]: https://www.imdb.com/title/tt0445934/
 
 
+Install
+-------
+
+This tool is written for Python 3.
+We will need [Flit][] to install it:
+
+    $ pip install --user flit
+
+Then, install the program itself:
+
+    $ flit install --symlink --user
+
+The `--symlink` flag means that you can edit the code and use it immediately.
+
+[flit]: https://flit.readthedocs.io/en/latest/
+
+
 Set Up
 ------
 
@@ -17,22 +34,16 @@ On a shared account, you may need to create yourself an [IAM user][iam] with "pr
 Use the `us-west-2` (Oregon) region.
 
 Next, obtain the private key and put it here.
-The filename is currently hard-coded as `ironcheese.pem`.
 Make sure the permissions are right:
 
     $ chmod 0600 ironcheese.pem
 
-We will need [Flit][] to install the tool:
+You can either use that name or set the `CHAZZ_KEY` environment variable to point to the key file:
 
-    $ pip install --user flit
-
-Finally, install the program itself (while allowing edits):
-
-    $ flit install --symlink --user
+    $ export CHAZ_KEY=`pwd`/ironcheese.pem
 
 [config]: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration
 [iam]: https://console.aws.amazon.com/iam/home?#/users
-[flit]: https://flit.readthedocs.io/en/latest/
 
 
 Use

@@ -8,6 +8,7 @@ import click
 import subprocess
 import socket
 import time
+import os
 
 __version__ = '1.0.0'
 
@@ -15,8 +16,12 @@ __version__ = '1.0.0'
 # "best" image first.
 HB_AMI_IDS = ['ami-0ce51e94bbeba2650', 'ami-0c7ccefee8f931530']
 
-# The user and path to the private key file to use for SSH.
+# The path to the private key file to use for SSH. We use the
+# environment variable if it's set and this filename otherwise.
+KEY_ENVVAR = 'CHAZZ_KEY'
 KEY_FILE = 'ironcheese.pem'
+
+# User and port for SSH.
 USER = 'centos'
 SSH_PORT = 22
 
@@ -145,9 +150,10 @@ def get_running_instance(ec2):
 def ssh_command(host):
     """Construct a command for SSHing into an EC2 instance.
     """
+    key_file = os.environ.get(KEY_ENVVAR, KEY_FILE)
     return [
         'ssh',
-        '-i', KEY_FILE,
+        '-i', key_file,
         '{}@{}'.format(USER, host),
     ]
 
