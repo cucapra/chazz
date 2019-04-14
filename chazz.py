@@ -109,11 +109,13 @@ def ssh_command(host):
 
 @click.group()
 def chazz():
-    pass
+    """Run HammerBlade on F1."""
 
 
 @chazz.command()
 def ssh():
+    """Connect to a HammerBlade instance with SSH.
+    """
     ec2 = boto3.client('ec2')
     inst = get_running_instance(ec2)
     print(fmt_cmd(ssh_command(inst['PublicDnsName'])))
@@ -121,6 +123,8 @@ def ssh():
 
 @chazz.command()
 def list():
+    """Show the available HammerBlade instances.
+    """
     ec2 = boto3.client('ec2')
     for inst in get_hb_instances(ec2):
         print('{0[InstanceId]} ({0[State][Name]}): {0[ImageId]}'.format(inst))

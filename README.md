@@ -28,3 +28,9 @@ Finally, install the dependencies for this tool:
 
 [config]: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration
 [iam]: https://console.aws.amazon.com/iam/home?#/users
+
+
+Use
+---
+
+Type `python3 chazz.py` to see a list of available commands.
