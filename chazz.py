@@ -58,7 +58,7 @@ def get_instance(ec2, instance_id):
     """Look up an EC2 instance by its id.
     """
     r = ec2.describe_instances(InstanceIds=[instance_id])
-    return r['Reservations']['Instances'][0]
+    return r['Reservations'][0]['Instances'][0]
 
 
 def get_hb_instance(ec2):
