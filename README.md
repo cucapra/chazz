@@ -34,3 +34,9 @@ Use
 ---
 
 Type `python3 chazz.py` to see a list of available commands.
+
+To boot up an instance and SSH into it, type `python3 chazz.py ssh`.
+Use the instance like normal, then disconnect.
+Type `python3 chazz.py stop` to stop the instance (and stop paying for it).
+
+You can see a list of available HammerBlade instances with `python3 chazz.py list`.
