@@ -20,6 +20,9 @@ KEY_FILE = 'ironcheese.pem'
 USER = 'centos'
 SSH_PORT = 22
 
+# The command to run to load the FPGA configuration.
+FPGA_LOAD_CMD = 'sudo fpga-load-local-image -S 0 -F -I $AGFI'
+
 
 class State(enum.IntEnum):
     """The EC2 instance state codes.
@@ -165,8 +168,13 @@ def ssh():
     # Wait for the host to start its SSH server.
     host_wait(host, SSH_PORT)
 
-    # Print and execute the SSH command.
+    # Run the FPGA configuration command via SSH.
     cmd = ssh_command(host)
+    load_cmd = cmd + [FPGA_LOAD_CMD]
+    print(fmt_cmd(load_cmd))
+    subprocess.run(load_cmd)
+
+    # Run the interactive SSH command.
     print(fmt_cmd(cmd))
     subprocess.run(cmd)
 

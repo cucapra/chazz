@@ -41,6 +41,7 @@ Use
 Type `chazz` to see a list of available commands.
 
 To boot up an instance and SSH into it, type `chazz ssh`.
+Before giving you a prompt, the tool runs a command to load the FPGA configuration.
 Use the instance like normal, then disconnect.
 Type `chazz stop` to stop the instance (and stop paying for it).
 
