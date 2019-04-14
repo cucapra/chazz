@@ -57,10 +57,13 @@ def get_hb_instance(ec2):
     return None
 
 
-def wait_for_instance(ec2, instance_id):
-    """Wait for an EC2 instance to transition into running state.
+def instance_wait(ec2, instance_id, until='instance_running'):
+    """Wait for an EC2 instance to transition into a given state.
+
+    Possibilities for `until` include `'instance_running'` and
+    `'instance_stopped'`.
     """
-    waiter = ec2.get_waiter('instance_running')
+    waiter = ec2.get_waiter(until)
     waiter.wait(InstanceIds=[instance_id])
 
 
@@ -83,7 +86,7 @@ def get_running_instance(ec2):
             print(r)
 
             print('waiting for instance to start')
-            wait_for_instance(iid)
+            instance_wait(iid)
 
             return inst
 
@@ -128,6 +131,18 @@ def list():
     ec2 = boto3.client('ec2')
     for inst in get_hb_instances(ec2):
         print('{0[InstanceId]} ({0[State][Name]}): {0[ImageId]}'.format(inst))
+
+
+@chazz.command()
+def stop():
+    """Stop all running HammerBlade instances.
+    """
+    ec2 = boto3.client('ec2')
+    for inst in get_hb_instances(ec2):
+        if inst['State']['Code'] == State.RUNNING:
+            iid = inst['InstanceId']
+            print('stopping {}'.format(iid))
+            instance_wait(iid, 'instance_stopped')
 
 
 if __name__ == '__main__':
