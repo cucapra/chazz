@@ -54,6 +54,13 @@ def get_hb_instances(ec2):
             yield inst
 
 
+def get_instance(ec2, instance_id):
+    """Look up an EC2 instance by its id.
+    """
+    r = ec2.describe_instances(InstanceIds=[instance_id])
+    return r['Reservations']['Instances'][0]
+
+
 def get_hb_instance(ec2):
     """Return *some* existing HammerBlade EC2 instance, if one exists.
     Otherwise, return None.
@@ -93,7 +100,8 @@ def get_running_instance(ec2):
             print('waiting for instance to start')
             instance_wait(ec2, iid)
 
-            return inst
+            # "Refresh" the instance so we have its hostname.
+            return get_instance(iid)
 
         else:
             raise NotImplementedError(
