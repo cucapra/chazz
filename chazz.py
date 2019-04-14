@@ -2,6 +2,7 @@ import boto3
 import enum
 import shlex
 import click
+import subprocess
 
 # HammerBlade AMI IDs we have available, sorted by priority, with the
 # "best" image first.
@@ -121,7 +122,9 @@ def ssh():
     """
     ec2 = boto3.client('ec2')
     inst = get_running_instance(ec2)
-    print(fmt_cmd(ssh_command(inst['PublicDnsName'])))
+    cmd = ssh_command(inst['PublicDnsName'])
+    print(fmt_cmd(cmd))
+    subprocess.run(cmd)
 
 
 @chazz.command()
