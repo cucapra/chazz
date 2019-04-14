@@ -136,16 +136,21 @@ def list():
 
 
 @chazz.command()
-def stop():
+@click.option('--wait/--no-wait', default=False,
+              help='Wait for the instances to stop.')
+def stop(wait):
     """Stop all running HammerBlade instances.
     """
     ec2 = boto3.client('ec2')
     for inst in get_hb_instances(ec2):
         if inst['State']['Code'] == State.RUNNING:
             iid = inst['InstanceId']
+
             print('stopping {}'.format(iid))
             ec2.stop_instances(InstanceIds=[iid])
-            instance_wait(ec2, iid, 'instance_stopped')
+
+            if wait:
+                instance_wait(ec2, iid, 'instance_stopped')
 
 
 if __name__ == '__main__':
