@@ -145,6 +145,8 @@ def stop():
         if inst['State']['Code'] == State.RUNNING:
             iid = inst['InstanceId']
             print('stopping {}'.format(iid))
+            r = ec2.stop_instances(InstanceIds=[iid])
+            print(r)
             instance_wait(ec2, iid, 'instance_stopped')
 
 
