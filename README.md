@@ -40,7 +40,7 @@ Make sure the permissions are right:
 
 You can either use that name or set the `CHAZZ_KEY` environment variable to point to the key file:
 
-    $ export CHAZ_KEY=`pwd`/ironcheese.pem
+    $ export CHAZZ_KEY=`pwd`/ironcheese.pem
 
 [config]: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration
 [iam]: https://console.aws.amazon.com/iam/home?#/users
