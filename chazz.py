@@ -101,7 +101,7 @@ def get_running_instance(ec2):
             instance_wait(ec2, iid)
 
             # "Refresh" the instance so we have its hostname.
-            return get_instance(iid)
+            return get_instance(ec2, iid)
 
         else:
             raise NotImplementedError(
