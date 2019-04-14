@@ -83,8 +83,7 @@ def get_running_instance(ec2):
 
         elif inst['State']['Code'] == State.STOPPED:
             print('instance is stopped; starting')
-            r = ec2.start_instances(InstanceIds=[iid])
-            print(r)
+            ec2.start_instances(InstanceIds=[iid])
 
             print('waiting for instance to start')
             instance_wait(ec2, iid)
@@ -145,8 +144,7 @@ def stop():
         if inst['State']['Code'] == State.RUNNING:
             iid = inst['InstanceId']
             print('stopping {}'.format(iid))
-            r = ec2.stop_instances(InstanceIds=[iid])
-            print(r)
+            ec2.stop_instances(InstanceIds=[iid])
             instance_wait(ec2, iid, 'instance_stopped')
 
 
