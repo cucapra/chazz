@@ -1,0 +1,15 @@
+[build-system]
+requires = ["flit"]
+build-backend = "flit.buildapi"
+
+[tool.flit.metadata]
+module = "chazz"
+author = "Adrian Sampson"
+author-email = "asampson@cs.cornell.edu"
+requires = [
+    "click",
+    "boto3",
+]
+
+[tool.flit.scripts]
+chazz = "chazz:chazz"

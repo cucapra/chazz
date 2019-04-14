@@ -22,21 +22,26 @@ Make sure the permissions are right:
 
     $ chmod 0600 ironcheese.pem
 
-Finally, install the dependencies for this tool:
+We will need [Flit][] to install the tool:
 
-    $ pip install --user -r requirements.txt
+    $ pip install --user flit
+
+Finally, install the program itself (while allowing edits):
+
+    $ flit install --symlink --user
 
 [config]: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration
 [iam]: https://console.aws.amazon.com/iam/home?#/users
+[flit]: https://flit.readthedocs.io/en/latest/
 
 
 Use
 ---
 
-Type `python3 chazz.py` to see a list of available commands.
+Type `chazz` to see a list of available commands.
 
-To boot up an instance and SSH into it, type `python3 chazz.py ssh`.
+To boot up an instance and SSH into it, type `chazz ssh`.
 Use the instance like normal, then disconnect.
-Type `python3 chazz.py stop` to stop the instance (and stop paying for it).
+Type `chazz stop` to stop the instance (and stop paying for it).
 
-You can see a list of available HammerBlade instances with `python3 chazz.py list`.
+You can see a list of available HammerBlade instances with `chazz list`.

@@ -1,8 +1,13 @@
+"""Utilities for running HammerBlade in F1.
+"""
+
 import boto3
 import enum
 import shlex
 import click
 import subprocess
+
+__version__ = '1.0.0'
 
 # HammerBlade AMI IDs we have available, sorted by priority, with the
 # "best" image first.
