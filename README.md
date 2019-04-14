@@ -1,5 +1,15 @@
-Iron
-====
+Chazz: A Tool for Running HammerBlade in F1
+===========================================
+
+This is a little utility for interacting with HammerBlade machines running in [F1][].
+It's another [*Blades of Glory*][bog] reference.
+
+[f1]: https://aws.amazon.com/ec2/instance-types/f1/
+[bog]: https://www.imdb.com/title/tt0445934/
+
+
+Set Up
+------
 
 First, set up your [AWS configuration][config].
 You can type `aws configure` (if you have the AWS CLI) or manually create the files.

@@ -108,18 +108,18 @@ def ssh_command(host):
 
 
 @click.group()
-def iron():
+def chazz():
     pass
 
 
-@iron.command()
+@chazz.command()
 def ssh():
     ec2 = boto3.client('ec2')
     inst = get_running_instance(ec2)
     print(fmt_cmd(ssh_command(inst['PublicDnsName'])))
 
 
-@iron.command()
+@chazz.command()
 def list():
     ec2 = boto3.client('ec2')
     for inst in get_hb_instances(ec2):
@@ -127,4 +127,4 @@ def list():
 
 
 if __name__ == '__main__':
-    iron()
+    chazz()
