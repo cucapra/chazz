@@ -86,7 +86,7 @@ def get_running_instance(ec2):
             print(r)
 
             print('waiting for instance to start')
-            instance_wait(iid)
+            instance_wait(ec2, iid)
 
             return inst
 
@@ -142,7 +142,7 @@ def stop():
         if inst['State']['Code'] == State.RUNNING:
             iid = inst['InstanceId']
             print('stopping {}'.format(iid))
-            instance_wait(iid, 'instance_stopped')
+            instance_wait(ec2, iid, 'instance_stopped')
 
 
 if __name__ == '__main__':
