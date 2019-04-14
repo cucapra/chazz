@@ -1,6 +1,7 @@
 import boto3
 import enum
 import shlex
+import click
 
 # HammerBlade AMI IDs we have available, sorted by priority, with the
 # "best" image first.
@@ -38,21 +39,29 @@ def get_instances(ec2):
             yield inst
 
 
+def get_hb_instances(ec2):
+    """Generate the current EC2 instances based on any of the
+    HammerBlade AMIs.
+    """
+    for inst in get_instances(ec2):
+        if inst['ImageId'] in HB_AMI_IDS:
+            yield inst
+
+
+def get_hb_instance(ec2):
+    """Return *some* existing HammerBlade EC2 instance, if one exists.
+    Otherwise, return None.
+    """
+    for inst in get_hb_instances(ec2):
+        return inst
+    return None
+
+
 def wait_for_instance(ec2, instance_id):
     """Wait for an EC2 instance to transition into running state.
     """
     waiter = ec2.get_waiter('instance_running')
     waiter.wait(InstanceIds=[instance_id])
-
-
-def get_hb_instance(ec2):
-    """Return an existing HammerBlade EC2 instance, if one exists.
-    Otherwise, return None.
-    """
-    for inst in get_instances(ec2):
-        if inst['ImageId'] in HB_AMI_IDS:
-            return inst
-    return None
 
 
 def get_running_instance(ec2):
@@ -98,10 +107,23 @@ def ssh_command(host):
     ]
 
 
+@click.group()
 def iron():
+    pass
+
+
+@iron.command()
+def ssh():
     ec2 = boto3.client('ec2')
     inst = get_running_instance(ec2)
     print(fmt_cmd(ssh_command(inst['PublicDnsName'])))
+
+
+@iron.command()
+def list():
+    ec2 = boto3.client('ec2')
+    for inst in get_hb_instances(ec2):
+        print('{0[InstanceId]} ({0[State][Name]}): {0[ImageId]}'.format(inst))
 
 
 if __name__ == '__main__':
