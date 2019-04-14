@@ -6,6 +6,8 @@ import enum
 import shlex
 import click
 import subprocess
+import socket
+import time
 
 __version__ = '1.0.0'
 
@@ -16,6 +18,7 @@ HB_AMI_IDS = ['ami-0ce51e94bbeba2650', 'ami-0c7ccefee8f931530']
 # The user and path to the private key file to use for SSH.
 KEY_FILE = 'ironcheese.pem'
 USER = 'centos'
+SSH_PORT = 22
 
 
 class State(enum.IntEnum):
@@ -34,6 +37,29 @@ def fmt_cmd(cmd):
     copy-n-pastable string.
     """
     return ' '.join(shlex.quote(s) for s in cmd)
+
+
+def test_connect(host, port):
+    """Try connecting to `host` on `port`. Return a bool indicating
+    whether the connection was successful, i.e., someone is listening on
+    that port.
+    """
+    try:
+        sock = socket.create_connection((host, port))
+    except ConnectionRefusedError:
+        return False
+    else:
+        sock.close()
+        return True
+
+
+def host_wait(host, port, interval=10):
+    """Wait until `host` starts accepting connections on `port` by
+    attempting to connect every `interval` seconds.
+    """
+    while not test_connect(host, port):
+        print('{} not yet up on port {}'.format(host, port))
+        time.sleep(interval)
 
 
 def get_instances(ec2):
@@ -134,7 +160,13 @@ def ssh():
     """
     ec2 = boto3.client('ec2')
     inst = get_running_instance(ec2)
-    cmd = ssh_command(inst['PublicDnsName'])
+    host = inst['PublicDnsName']
+
+    # Wait for the host to start its SSH server.
+    host_wait(host, SSH_PORT)
+
+    # Print and execute the SSH command.
+    cmd = ssh_command(host)
     print(fmt_cmd(cmd))
     subprocess.run(cmd)
 
