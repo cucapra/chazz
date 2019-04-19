@@ -33,6 +33,9 @@ FPGA_LOAD_CMD = 'sudo fpga-load-local-image -S 0 -F -I $AGFI'
 HOST_LIB_DIR = '~/bsg_bladerunner/bsg_f1_eded3a7/cl_manycore/libraries/'
 HOST_LIB_CMD = 'sudo -E make install'
 
+# Location of example directory on local fs
+USER_EX_DIR = './example'
+
 class State(enum.IntEnum):
     """The EC2 instance state codes.
     """
@@ -161,20 +164,43 @@ def ssh_command(host):
         '{}@{}'.format(USER, host),
     ]
 
-def startup_routine(cmd):
-     # Run the FPGA configuration command via SSH.
-    load_cmd = cmd + [FPGA_LOAD_CMD]
+def scp_command(host, file_loc):
+    """Construct a command for SCPing into an EC2 instance.
+    """
+    key_file = os.environ.get(KEY_ENVVAR, KEY_FILE)
+    return [
+        'scp',
+        '-i', key_file,
+        '-r',
+        file_loc,
+        '{}@{}:~'.format(USER, host),
+    ]
+
+
+
+def startup_routine(host):
+    """Run startup actions when connecting to f1.
+       Some of these might end up overwriting when ssh multiple times?
+    """
+    ssh_cmd = ssh_command(host)
+
+    # Run the FPGA configuration command via SSH.    
+    load_cmd = ssh_cmd + [FPGA_LOAD_CMD]
     print(fmt_cmd(load_cmd))
     subprocess.run(load_cmd)
 
     # Make the host libraries
     cd_make = "cd " + HOST_LIB_DIR + " && " + HOST_LIB_CMD
-    cd_make_cmd = cmd + [cd_make]
+    cd_make_cmd = ssh_cmd + [cd_make]
     print(fmt_cmd(cd_make_cmd))
     subprocess.run(cd_make_cmd)
 
+    # scp an example directory onto f1. this could overwrite
+    scp_cmd = scp_command(host, USER_EX_DIR)
+    print(scp_cmd)
+    subprocess.run(scp_cmd) 
 
-
+    
 @click.group()
 def chazz():
     """Run HammerBlade on F1."""
@@ -192,10 +218,10 @@ def ssh():
     host_wait(host, SSH_PORT)
 
     # Run any initial commands
-    cmd = ssh_command(host)
-    startup_routine(cmd)
+    startup_routine(host)
 
     # Run the interactive SSH command.
+    cmd = ssh_command(host) 
     print(fmt_cmd(cmd))
     subprocess.run(cmd)
 
