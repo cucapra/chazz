@@ -28,6 +28,10 @@ SSH_PORT = 22
 # The command to run to load the FPGA configuration.
 FPGA_LOAD_CMD = 'sudo fpga-load-local-image -S 0 -F -I $AGFI'
 
+# Command to make f1 host libararies
+# TODO libaries might change location depending on ami
+HOST_LIB_DIR = '~/bsg_bladerunner/bsg_f1_eded3a7/cl_manycore/libraries/'
+HOST_LIB_CMD = 'sudo -E make install'
 
 class State(enum.IntEnum):
     """The EC2 instance state codes.
@@ -157,6 +161,19 @@ def ssh_command(host):
         '{}@{}'.format(USER, host),
     ]
 
+def startup_routine(cmd):
+     # Run the FPGA configuration command via SSH.
+    load_cmd = cmd + [FPGA_LOAD_CMD]
+    print(fmt_cmd(load_cmd))
+    subprocess.run(load_cmd)
+
+    # Make the host libraries
+    cd_make = "cd " + HOST_LIB_DIR + " && " + HOST_LIB_CMD
+    cd_make_cmd = cmd + [cd_make]
+    print(fmt_cmd(cd_make_cmd))
+    subprocess.run(cd_make_cmd)
+
+
 
 @click.group()
 def chazz():
@@ -174,11 +191,9 @@ def ssh():
     # Wait for the host to start its SSH server.
     host_wait(host, SSH_PORT)
 
-    # Run the FPGA configuration command via SSH.
+    # Run any initial commands
     cmd = ssh_command(host)
-    load_cmd = cmd + [FPGA_LOAD_CMD]
-    print(fmt_cmd(load_cmd))
-    subprocess.run(load_cmd)
+    startup_routine(cmd)
 
     # Run the interactive SSH command.
     print(fmt_cmd(cmd))
