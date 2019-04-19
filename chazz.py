@@ -197,7 +197,7 @@ def startup_routine(host):
 
     # scp an example directory onto f1. this could overwrite
     scp_cmd = scp_command(host, USER_EX_DIR)
-    print(scp_cmd)
+    print(fmt_cmd(scp_cmd))
     subprocess.run(scp_cmd) 
 
     
