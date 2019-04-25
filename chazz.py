@@ -25,8 +25,9 @@ KEY_FILE = 'ironcheese.pem'
 USER = 'centos'
 SSH_PORT = 22
 
-# The command to run to load the FPGA configuration.
-FPGA_LOAD_CMD = 'sudo fpga-load-local-image -S 0 -F -I $AGFI'
+# The setup script to run on new images.
+SETUP_SCRIPT_NAME = 'setup.sh'
+SETUP_SCRIPT_PATH = os.path.join(os.path.dirname(__file__), SETUP_SCRIPT_NAME)
 
 
 class State(enum.IntEnum):
@@ -147,15 +148,47 @@ def get_running_instance(ec2):
         raise NotImplementedError("should launch a new instance here")
 
 
+def _ssh_key():
+    """Get the path to the SSH key file."""
+    return os.environ.get(KEY_ENVVAR, KEY_FILE)
+
+
+def _ssh_host(host):
+    """Get the full user/host pair for use in SSH commands."""
+    return '{}@{}'.format(USER, host)
+
+
 def ssh_command(host):
     """Construct a command for SSHing into an EC2 instance.
     """
-    key_file = os.environ.get(KEY_ENVVAR, KEY_FILE)
     return [
         'ssh',
-        '-i', key_file,
-        '{}@{}'.format(USER, host),
+        '-i', _ssh_key(),
+        _ssh_host(host),
     ]
+
+
+def scp_command(src, host, dest):
+    """Construct an scp command for copying a local file to a remote
+    host.
+    """
+    return [
+        'scp',
+        '-i', _ssh_key(),
+        src,
+        '{}:{}'.format(_ssh_host(host), dest),
+    ]
+
+
+def run_setup(host):
+    """Set up the host by copying our setup script and running it.
+    """
+    copy_cmd = scp_command(SETUP_SCRIPT_PATH, host, SETUP_SCRIPT_NAME)
+    print(fmt_cmd(copy_cmd))
+    subprocess.run(copy_cmd)
+    script_cmd = ssh_command(host) + ['sh', SETUP_SCRIPT_NAME]
+    print(fmt_cmd(script_cmd))
+    subprocess.run(script_cmd)
 
 
 @click.group()
@@ -174,13 +207,11 @@ def ssh():
     # Wait for the host to start its SSH server.
     host_wait(host, SSH_PORT)
 
-    # Run the FPGA configuration command via SSH.
-    cmd = ssh_command(host)
-    load_cmd = cmd + [FPGA_LOAD_CMD]
-    print(fmt_cmd(load_cmd))
-    subprocess.run(load_cmd)
+    # Set up the VM.
+    run_setup(host)
 
     # Run the interactive SSH command.
+    cmd = ssh_command(host)
     print(fmt_cmd(cmd))
     subprocess.run(cmd)
 
