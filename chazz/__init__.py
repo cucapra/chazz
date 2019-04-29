@@ -286,15 +286,15 @@ def stop(ctx, wait, terminate):
             iid = inst['InstanceId']
 
             if terminate:
-                print('stopping {}'.format(iid))
-                ec2.stop_instances(InstanceIds=[iid])
-                if wait:
-                    instance_wait(ec2, iid, 'instance_stopped')
-            else:
                 print('terminating {}'.format(iid))
                 ec2.terminate_instances(InstanceIds=[iid])
                 if wait:
                     instance_wait(ec2, iid, 'instance_terminated')
+            else:
+                print('stopping {}'.format(iid))
+                ec2.stop_instances(InstanceIds=[iid])
+                if wait:
+                    instance_wait(ec2, iid, 'instance_stopped')
 
 
 if __name__ == '__main__':
