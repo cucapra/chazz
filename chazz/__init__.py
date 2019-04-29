@@ -12,12 +12,13 @@ import os
 
 __version__ = '1.0.0'
 
-# HammerBlade AMI IDs we have available, sorted by priority, with the
-# "best" image first.
+# HammerBlade AMI IDs we have available. Put the "best" image first:
+# this is the one we'll use to start new instances.
 HB_AMI_IDS = ['ami-0ce51e94bbeba2650', 'ami-0c7ccefee8f931530']
 
-# We keep everything in the Oregon region for now.
-AWS_REGION = 'us-west-2'
+# Some AWS parameters.
+AWS_REGION = 'us-west-2'  # The Oregon region.
+EC2_TYPE = 'f1.2xlarge'  # Launch the smallest kind of F1 instance.
 
 # The path to the private key file to use for SSH. We use the
 # environment variable if it's set and this filename otherwise.
@@ -118,6 +119,19 @@ def instance_wait(ec2, instance_id, until='instance_running'):
     waiter.wait(InstanceIds=[instance_id])
 
 
+def create_instance(ec2):
+    """Create (and start) a new HammerBlade EC2 instance.
+    """
+    res = ec2.run_instances(
+        ImageId=HB_AMI_IDS[0],
+        InstanceType=EC2_TYPE,
+        MinCount=1,
+        MaxCount=1,
+    )
+    assert len(res['Instances']) == 1
+    return res['Instances'][0]
+
+
 def get_running_instance(ec2):
     """Get a *running* HammerBlade EC2 instance, starting a new one or
     booting up an old one if necessary.
@@ -147,8 +161,8 @@ def get_running_instance(ec2):
             )
 
     else:
-        print('no existing instance')
-        raise NotImplementedError("should launch a new instance here")
+        print('no existing instance; creating a new one')
+        return create_instance(ec2)
 
 
 def _ssh_key():
