@@ -192,15 +192,20 @@ def run_setup(host):
 
 
 @click.group()
-def chazz():
+@click.pass_context
+def chazz(ctx):
     """Run HammerBlade on F1."""
+    ctx.ensure_object(dict)
+    ctx.obj['EC2'] = boto3.client('ec2')
 
 
 @chazz.command()
-def ssh():
+@click.pass_context
+def ssh(ctx):
     """Connect to a HammerBlade instance with SSH.
     """
-    ec2 = boto3.client('ec2')
+    ec2 = ctx.obj['EC2']
+
     inst = get_running_instance(ec2)
     host = inst['PublicDnsName']
 
@@ -217,21 +222,23 @@ def ssh():
 
 
 @chazz.command()
-def list():
+@click.pass_context
+def list(ctx):
     """Show the available HammerBlade instances.
     """
-    ec2 = boto3.client('ec2')
+    ec2 = ctx.obj['EC2']
     for inst in get_hb_instances(ec2):
         print('{0[InstanceId]} ({0[State][Name]}): {0[ImageId]}'.format(inst))
 
 
 @chazz.command()
+@click.pass_context
 @click.option('--wait/--no-wait', default=False,
               help='Wait for the instances to stop.')
-def stop(wait):
+def stop(ctx, wait):
     """Stop all running HammerBlade instances.
     """
-    ec2 = boto3.client('ec2')
+    ec2 = ctx.obj['EC2']
     for inst in get_hb_instances(ec2):
         if inst['State']['Code'] == State.RUNNING:
             iid = inst['InstanceId']
