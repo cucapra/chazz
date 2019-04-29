@@ -31,7 +31,7 @@ Set Up
 First, set up your [AWS configuration][config].
 You can type `aws configure` (if you have the AWS CLI) or manually create the files.
 On a shared account, you may need to create yourself an [IAM user][iam] with "programmatic access" to get an access key.
-Use the `us-west-2` (Oregon) region.
+You don't need to configure a default region; Chazz specifies the region itself.
 
 Next, obtain the private key and put it here.
 Make sure the permissions are right:

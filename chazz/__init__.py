@@ -16,6 +16,9 @@ __version__ = '1.0.0'
 # "best" image first.
 HB_AMI_IDS = ['ami-0ce51e94bbeba2650', 'ami-0c7ccefee8f931530']
 
+# We keep everything in the Oregon region for now.
+AWS_REGION = 'us-west-2'
+
 # The path to the private key file to use for SSH. We use the
 # environment variable if it's set and this filename otherwise.
 KEY_ENVVAR = 'CHAZZ_KEY'
@@ -196,7 +199,7 @@ def run_setup(host):
 def chazz(ctx):
     """Run HammerBlade on F1."""
     ctx.ensure_object(dict)
-    ctx.obj['EC2'] = boto3.client('ec2')
+    ctx.obj['EC2'] = boto3.client('ec2', region_name=AWS_REGION)
 
 
 @chazz.command()
