@@ -19,6 +19,7 @@ HB_AMI_IDS = ['ami-0ce51e94bbeba2650', 'ami-0c7ccefee8f931530']
 # Some AWS parameters.
 AWS_REGION = 'us-west-2'  # The Oregon region.
 EC2_TYPE = 'f1.2xlarge'  # Launch the smallest kind of F1 instance.
+KEY_NAME = 'ironcheese'  # The name of the EC2 keypair.
 
 # The path to the private key file to use for SSH. We use the
 # environment variable if it's set and this filename otherwise.
@@ -130,6 +131,7 @@ def create_instance(ec2):
         InstanceType=EC2_TYPE,
         MinCount=1,
         MaxCount=1,
+        KeyName=KEY_NAME,
     )
     assert len(res['Instances']) == 1
     return res['Instances'][0]
