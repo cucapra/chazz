@@ -55,6 +55,7 @@ To boot up an instance and SSH into it, type `chazz ssh`.
 Before giving you a prompt, the tool runs a command to load the FPGA configuration.
 Use the instance like normal, then disconnect.
 Type `chazz stop` to stop the instance (and stop paying for it).
+Or use `chazz stop --terminate` to permanently decommission the instance.
 
 You can see a list of available HammerBlade instances with `chazz list`.
 There is also a `chazz start` command, which is like `chazz ssh` in that it ensures that there's a running instance, but it does not *also* attempt to connect with SSH.

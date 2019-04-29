@@ -268,7 +268,9 @@ def list(ctx):
 @click.pass_context
 @click.option('--wait/--no-wait', default=False,
               help='Wait for the instances to stop.')
-def stop(ctx, wait):
+@click.option('--terminate/--stop', default=False,
+              help='Destroy the instance, or just stop it (the default).')
+def stop(ctx, wait, terminate):
     """Stop all running HammerBlade instances.
     """
     ec2 = ctx.obj['EC2']
@@ -276,11 +278,16 @@ def stop(ctx, wait):
         if inst['State']['Code'] == State.RUNNING:
             iid = inst['InstanceId']
 
-            print('stopping {}'.format(iid))
-            ec2.stop_instances(InstanceIds=[iid])
-
-            if wait:
-                instance_wait(ec2, iid, 'instance_stopped')
+            if terminate:
+                print('stopping {}'.format(iid))
+                ec2.stop_instances(InstanceIds=[iid])
+                if wait:
+                    instance_wait(ec2, iid, 'instance_stopped')
+            else:
+                print('terminating {}'.format(iid))
+                ec2.terminate_instances(InstanceIds=[iid])
+                if wait:
+                    instance_wait(ec2, iid, 'instance_terminated')
 
 
 if __name__ == '__main__':
