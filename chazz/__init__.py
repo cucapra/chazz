@@ -284,10 +284,11 @@ def stop(ctx, wait, terminate):
     for inst in get_hb_instances(ec2):
         iid = inst['InstanceId']
         if terminate:
-            print('terminating {}'.format(iid))
-            ec2.terminate_instances(InstanceIds=[iid])
-            if wait:
-                instance_wait(ec2, iid, 'instance_terminated')
+            if inst['State']['Code'] != State.TERMINATED:
+                print('terminating {}'.format(iid))
+                ec2.terminate_instances(InstanceIds=[iid])
+                if wait:
+                    instance_wait(ec2, iid, 'instance_terminated')
         else:
             if inst['State']['Code'] == State.RUNNING:
                 print('stopping {}'.format(iid))
