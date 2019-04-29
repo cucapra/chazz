@@ -194,6 +194,12 @@ def run_setup(host):
     subprocess.run(script_cmd)
 
 
+def _fmt_inst(inst):
+    """Format an EC2 instance object as a string for display.
+    """
+    return '{0[InstanceId]} ({0[State][Name]}): {0[ImageId]}'.format(inst)
+
+
 @click.group()
 @click.pass_context
 def chazz(ctx):
@@ -226,12 +232,22 @@ def ssh(ctx):
 
 @chazz.command()
 @click.pass_context
+def start(ctx):
+    """Ensure that a HammerBlade instance is running.
+    """
+    ec2 = ctx.obj['EC2']
+    inst = get_running_instance(ec2)
+    print(_fmt_inst(inst))
+
+
+@chazz.command()
+@click.pass_context
 def list(ctx):
     """Show the available HammerBlade instances.
     """
     ec2 = ctx.obj['EC2']
     for inst in get_hb_instances(ec2):
-        print('{0[InstanceId]} ({0[State][Name]}): {0[ImageId]}'.format(inst))
+        print(_fmt_inst(inst))
 
 
 @chazz.command()

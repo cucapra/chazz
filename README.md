@@ -57,3 +57,4 @@ Use the instance like normal, then disconnect.
 Type `chazz stop` to stop the instance (and stop paying for it).
 
 You can see a list of available HammerBlade instances with `chazz list`.
+There is also a `chazz start` command, which is like `chazz ssh` in that it ensures that there's a running instance, but it does not *also* attempt to connect with SSH.
