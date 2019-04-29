@@ -30,8 +30,7 @@ USER = 'centos'
 SSH_PORT = 22
 
 # The setup script to run on new images.
-SETUP_SCRIPT_NAME = 'setup.sh'
-SETUP_SCRIPT_PATH = os.path.join(os.path.dirname(__file__), SETUP_SCRIPT_NAME)
+SETUP_SCRIPT = os.path.join(os.path.dirname(__file__), 'setup.sh')
 
 
 class State(enum.IntEnum):
@@ -52,14 +51,18 @@ def fmt_cmd(cmd):
     return ' '.join(shlex.quote(s) for s in cmd)
 
 
-def test_connect(host, port):
+def test_connect(host, port, timeout=2):
     """Try connecting to `host` on `port`. Return a bool indicating
     whether the connection was successful, i.e., someone is listening on
     that port.
     """
     try:
-        sock = socket.create_connection((host, port))
+        sock = socket.create_connection((host, port), timeout)
     except ConnectionRefusedError:
+        print('connection refused')
+        return False
+    except socket.timeout:
+        print('connection timeout')
         return False
     else:
         sock.close()
@@ -200,12 +203,14 @@ def scp_command(src, host, dest):
 def run_setup(host):
     """Set up the host by copying our setup script and running it.
     """
-    copy_cmd = scp_command(SETUP_SCRIPT_PATH, host, SETUP_SCRIPT_NAME)
-    print(fmt_cmd(copy_cmd))
-    subprocess.run(copy_cmd)
-    script_cmd = ssh_command(host) + ['sh', SETUP_SCRIPT_NAME]
-    print(fmt_cmd(script_cmd))
-    subprocess.run(script_cmd)
+    # Read the setup script.
+    with open(SETUP_SCRIPT, 'rb') as f:
+        setup_script = f.read()
+
+    # Pipe the command into sh on the host.
+    sh_cmd = ssh_command(host) + ['sh']
+    print(fmt_cmd(sh_cmd))
+    subprocess.run(sh_cmd, stdin=setup_script)
 
 
 def _fmt_inst(inst):
