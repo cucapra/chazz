@@ -1,6 +1,0 @@
-1) source run.sh
-
-OR
-
-1) Make both host and device
-2) sudo -E ./host/host ./device/main.riscv
