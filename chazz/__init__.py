@@ -176,7 +176,8 @@ def get_running_instance(ec2):
 
     else:
         print('no existing instance; creating a new one')
-        return create_instance(ec2)
+        inst = create_instance(ec2)
+        return get_instance(ec2, inst['InstanceId'])
 
 
 def _ssh_key():
