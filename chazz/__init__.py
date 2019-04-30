@@ -215,6 +215,8 @@ def scp_command(src, host, dest):
 def run_setup(host):
     """Set up the host by copying our setup script and running it.
     """
+    print('running setup script')
+
     # Read the setup script.
     with open(SETUP_SCRIPT, 'rb') as f:
         setup_script = f.read()
