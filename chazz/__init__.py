@@ -281,13 +281,11 @@ def shell(ctx):
     inst = get_running_instance(ec2, ctx.obj['AMI_IDS'])
     host = inst['PublicDnsName']
 
-    subprocess.run([
+    cmd = [
         'ssh-agent', 'sh', '-c',
-        'ssh-add {} ; export HB={} ; $SHELL'.format(
-            shlex.quote(_ssh_key()),
-            shlex.quote(_ssh_host(host)),
-        ),
-    ])
+        'ssh-add {} ; $SHELL'.format(shlex.quote(_ssh_key())),
+    ]
+    subprocess.run(cmd, env={'HB': _ssh_host(host)})
 
 
 @chazz.command()
