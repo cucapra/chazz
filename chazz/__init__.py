@@ -24,6 +24,7 @@ HB_AMI_IDS = [
 AWS_REGION = 'us-west-2'  # The Oregon region.
 EC2_TYPE = 'f1.2xlarge'  # Launch the smallest kind of F1 instance.
 KEY_NAME = 'ironcheese'  # The name of the EC2 keypair.
+SECURITY_GROUP = 'chazz'  # The name of a security group that allows SSH.
 
 # The path to the private key file to use for SSH. We use the
 # environment variable if it's set and this filename otherwise.
@@ -139,6 +140,7 @@ def create_instance(ec2):
         MinCount=1,
         MaxCount=1,
         KeyName=KEY_NAME,
+        SecurityGroups=[SECURITY_GROUP],
     )
     assert len(res['Instances']) == 1
     return res['Instances'][0]
