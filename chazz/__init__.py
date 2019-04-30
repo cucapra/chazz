@@ -273,6 +273,25 @@ def ssh(ctx):
 
 @chazz.command()
 @click.pass_context
+def shell(ctx):
+    """Launch a shell for convenient SSH invocation.
+    """
+    ec2 = ctx.obj['EC2']
+
+    inst = get_running_instance(ec2, ctx.obj['AMI_IDS'])
+    host = inst['PublicDnsName']
+
+    subprocess.run([
+        'ssh-agent', 'sh', '-c',
+        'ssh-add {} ; export HB={} ; $SHELL'.format(
+            shlex.quote(_ssh_key()),
+            shlex.quote(_ssh_host(host)),
+        ),
+    ])
+
+
+@chazz.command()
+@click.pass_context
 def start(ctx):
     """Ensure that a HammerBlade instance is running.
     """
