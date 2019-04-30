@@ -14,7 +14,11 @@ __version__ = '1.0.0'
 
 # HammerBlade AMI IDs we have available. Put the "best" image first:
 # this is the one we'll use to start new instances.
-HB_AMI_IDS = ['ami-0ce51e94bbeba2650', 'ami-0c7ccefee8f931530']
+HB_AMI_IDS = [
+    'ami-0270f06e16bfee050',
+    'ami-0ce51e94bbeba2650',
+    'ami-0c7ccefee8f931530',
+]
 
 # Some AWS parameters.
 AWS_REGION = 'us-west-2'  # The Oregon region.
