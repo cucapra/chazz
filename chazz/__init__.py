@@ -109,6 +109,9 @@ def get_hb_instance(ec2):
     Otherwise, return None.
     """
     for inst in get_hb_instances(ec2):
+        if inst['State']['Code'] in (State.TERMINATED, State.SHUTTING_DOWN):
+            # Ignore terminated instances.
+            continue
         return inst
     return None
 
