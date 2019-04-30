@@ -283,9 +283,13 @@ def shell(ctx):
 
     cmd = [
         'ssh-agent', 'sh', '-c',
-        'ssh-add {} ; $SHELL'.format(shlex.quote(_ssh_key())),
+        'ssh-add "$HB_KEY" ; exec "$SHELL"',
     ]
-    subprocess.run(cmd, env={'HB': _ssh_host(host)})
+    subprocess.run(cmd, env={
+        'HB': _ssh_host(host),
+        'HB_HOST': host,
+        'HB_KEY': _ssh_key(),
+    })
 
 
 @chazz.command()
