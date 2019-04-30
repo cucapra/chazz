@@ -222,7 +222,7 @@ def run_setup(host):
     # Pipe the command into sh on the host.
     sh_cmd = ssh_command(host) + ['sh']
     print(fmt_cmd(sh_cmd))
-    subprocess.run(sh_cmd, stdin=setup_script)
+    subprocess.run(sh_cmd, input=setup_script)
 
 
 def _fmt_inst(inst):
