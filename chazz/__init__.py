@@ -237,11 +237,16 @@ def _fmt_inst(inst):
 @click.pass_context
 @click.option('--ami', multiple=True, default=HB_AMI_IDS,
               help='An AMI ID for HammerBlade images.')
-def chazz(ctx, ami):
+@click.option('-i', '--image', multiple=True, type=int,
+              help='An image index to use (exclusively).')
+def chazz(ctx, ami, image):
     """Run HammerBlade on F1."""
     ctx.ensure_object(dict)
     ctx.obj['EC2'] = boto3.client('ec2', region_name=AWS_REGION)
-    ctx.obj['AMI_IDS'] = ami
+    if image:
+        ctx.obj['AMI_IDS'] = [HB_AMI_IDS[i] for i in image]
+    else:
+        ctx.obj['AMI_IDS'] = ami
 
 
 @chazz.command()
