@@ -59,3 +59,5 @@ Or use `chazz stop --terminate` to permanently decommission the instance.
 
 You can see a list of available HammerBlade instances with `chazz list`.
 There is also a `chazz start` command, which is like `chazz ssh` in that it ensures that there's a running instance, but it does not *also* attempt to connect with SSH.
+
+Use the `--ami` option to choose a specific AMI ID to connect to or launch.

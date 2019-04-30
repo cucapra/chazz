@@ -93,12 +93,12 @@ def get_instances(ec2):
             yield inst
 
 
-def get_hb_instances(ec2):
+def get_hb_instances(ec2, ami_ids):
     """Generate the current EC2 instances based on any of the
     HammerBlade AMIs.
     """
     for inst in get_instances(ec2):
-        if inst['ImageId'] in HB_AMI_IDS:
+        if inst['ImageId'] in ami_ids:
             yield inst
 
 
@@ -109,11 +109,11 @@ def get_instance(ec2, instance_id):
     return r['Reservations'][0]['Instances'][0]
 
 
-def get_hb_instance(ec2):
+def get_hb_instance(ec2, ami_ids):
     """Return *some* existing HammerBlade EC2 instance, if one exists.
     Otherwise, return None.
     """
-    for inst in get_hb_instances(ec2):
+    for inst in get_hb_instances(ec2, ami_ids):
         if inst['State']['Code'] in (State.TERMINATED, State.SHUTTING_DOWN):
             # Ignore terminated instances.
             continue
@@ -131,11 +131,11 @@ def instance_wait(ec2, instance_id, until='instance_running'):
     waiter.wait(InstanceIds=[instance_id])
 
 
-def create_instance(ec2):
+def create_instance(ec2, ami_ids):
     """Create (and start) a new HammerBlade EC2 instance.
     """
     res = ec2.run_instances(
-        ImageId=HB_AMI_IDS[0],
+        ImageId=ami_ids[0],
         InstanceType=EC2_TYPE,
         MinCount=1,
         MaxCount=1,
@@ -146,11 +146,11 @@ def create_instance(ec2):
     return res['Instances'][0]
 
 
-def get_running_instance(ec2):
+def get_running_instance(ec2, ami_ids):
     """Get a *running* HammerBlade EC2 instance, starting a new one or
     booting up an old one if necessary.
     """
-    inst = get_hb_instance(ec2)
+    inst = get_hb_instance(ec2, ami_ids)
 
     if inst:
         iid = inst['InstanceId']
@@ -176,7 +176,7 @@ def get_running_instance(ec2):
 
     else:
         print('no existing instance; creating a new one')
-        inst = create_instance(ec2)
+        inst = create_instance(ec2, ami_ids)
         return get_instance(ec2, inst['InstanceId'])
 
 
@@ -235,10 +235,13 @@ def _fmt_inst(inst):
 
 @click.group()
 @click.pass_context
-def chazz(ctx):
+@click.option('--ami', multiple=True, default=HB_AMI_IDS,
+              help='An AMI ID for HammerBlade images.')
+def chazz(ctx, ami):
     """Run HammerBlade on F1."""
     ctx.ensure_object(dict)
     ctx.obj['EC2'] = boto3.client('ec2', region_name=AWS_REGION)
+    ctx.obj['AMI_IDS'] = ami
 
 
 @chazz.command()
@@ -248,7 +251,7 @@ def ssh(ctx):
     """
     ec2 = ctx.obj['EC2']
 
-    inst = get_running_instance(ec2)
+    inst = get_running_instance(ec2, ctx.obj['AMI_IDS'])
     host = inst['PublicDnsName']
 
     # Wait for the host to start its SSH server.
@@ -269,7 +272,7 @@ def start(ctx):
     """Ensure that a HammerBlade instance is running.
     """
     ec2 = ctx.obj['EC2']
-    inst = get_running_instance(ec2)
+    inst = get_running_instance(ec2, ctx.obj['AMI_IDS'])
     print(_fmt_inst(inst))
 
 
@@ -279,7 +282,7 @@ def list(ctx):
     """Show the available HammerBlade instances.
     """
     ec2 = ctx.obj['EC2']
-    for inst in get_hb_instances(ec2):
+    for inst in get_hb_instances(ec2, ctx.obj['AMI_IDS']):
         print(_fmt_inst(inst))
 
 
@@ -293,7 +296,7 @@ def stop(ctx, wait, terminate):
     """Stop all running HammerBlade instances.
     """
     ec2 = ctx.obj['EC2']
-    for inst in get_hb_instances(ec2):
+    for inst in get_hb_instances(ec2, ctx.obj['AMI_IDS']):
         iid = inst['InstanceId']
         if terminate:
             if inst['State']['Code'] != State.TERMINATED:
