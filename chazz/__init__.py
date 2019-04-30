@@ -273,7 +273,8 @@ def ssh(ctx):
 
 @chazz.command()
 @click.pass_context
-def shell(ctx):
+@click.argument('cmd', required=False, default='exec "$SHELL"')
+def shell(ctx, cmd):
     """Launch a shell for convenient SSH invocation.
     """
     ec2 = ctx.obj['EC2']
@@ -283,7 +284,7 @@ def shell(ctx):
 
     cmd = [
         'ssh-agent', 'sh', '-c',
-        'ssh-add "$HB_KEY" ; exec "$SHELL"',
+        'ssh-add "$HB_KEY" ; {}'.format(cmd),
     ]
     subprocess.run(cmd, env={
         'HB': _ssh_host(host),

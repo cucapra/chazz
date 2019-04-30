@@ -63,6 +63,7 @@ There is also a `chazz start` command, which is like `chazz ssh` in that it ensu
 For more complex interactions with a HammerBlade server, use `chazz shell`.
 You get an interactive shell with the appropriate key pre-loaded in an SSH agent and the host in an environment variable called `$HB`.
 So you can type `ssh $HB` to connect or `scp -r example $HB` to upload files.
+Or to run a specific command, pass it as an argument, as in `chazz shell 'scp something.c $HB'`.
 
 Use the `--ami` option to choose a specific AMI ID to connect to or launch.
 As a shorthand, you can also use `-iN` to choose the `N`th image---for example, `chazz -i1 list` will show instances using the second image in our built-in list.
