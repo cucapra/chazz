@@ -289,7 +289,7 @@ def shell(ctx, cmd):
     subprocess.run(cmd, env={
         'HB': _ssh_host(host),
         'HB_HOST': host,
-        'HB_KEY': _ssh_key(),
+        'HB_KEY': os.path.abspath(_ssh_key()),
     })
 
 
