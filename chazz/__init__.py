@@ -177,6 +177,10 @@ def get_running_instance(ec2, ami_ids):
     else:
         print('no existing instance; creating a new one')
         inst = create_instance(ec2, ami_ids)
+
+        print('waiting for new instance to start')
+        instance_wait(ec2, inst['InstanceId'])
+
         return get_instance(ec2, inst['InstanceId'])
 
 
