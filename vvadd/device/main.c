@@ -23,25 +23,16 @@ int g_src1[dim];
 int g_dest[dim];
 // Size Variables & Constants.
 const int g_size = dim;
-//int size = ( g_size / ( bsg_tiles_X * bsg_tiles_Y ) );
-int size = g_size;
-// Control Signals.
-//volatile int g_go_flag = 0;
-//volatile int g_done_flag = 0;
+const int size = g_size;
 
 //------------------------------------------------------------------------
 // Vector Vecctor Add function
 //------------------------------------------------------------------------
 
-void vvadd( int* dest, int* src0, int* src1, int size )
-{
+void vvadd( int* dest, int* src0, int* src1, int size ) {
   for ( int i = 0; i < size; i++) {
     dest[i] = src0[i] + src1[i];
-  }	
-  // Trace Execution Phase.
-  //bsg_printf("e");
-  // Set the done flag.
-  //g_done_flag = 1;
+  }
 }
 
 //------------------------------------------------------------------------
@@ -65,19 +56,6 @@ int main()
 
   // Execute vvadd for just this tile's partition. 
   vvadd( &( g_dest[start_id] ), &( g_src0[start_id] ), &( g_src1[start_id] ), size );
-
-  // Tile 0 will wait until all tiles are done.
-  /*if ( tile_id == 0 ) {
-    for ( int i = 0; i < bsg_tiles_X; i++ ) {
-      for ( int j = 0; j < bsg_tiles_Y; j++ ) {
-        int* done  = bsg_remote_ptr( i, j, &( g_done_flag ) ); 
-        while ( !( *( done ) ) ) {
-          bsg_printf(".");
-        }
-      }
-    }
-    bsg_finish(); 
-  }*/
 
   // each tile sends its own bsg_finish and host takes care of it
   bsg_finish();

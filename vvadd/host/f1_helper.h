@@ -117,7 +117,25 @@ void hammaSymbolMemcpy(uint8_t fd, uint32_t x, uint32_t y, const char *exeName, 
 
 }
 
+// loads the kernel for a range of tiles
+// the origin of the tile group is assumed to be the first tile in the block
+void hammaLoadMultiple(uint8_t fd, char *manycore_program, int x1, int y1, int x2, int y2) {
+  int origin_x = x1;
+  int origin_y = y1;
+  for (uint8_t y = y1; y < y2; y++) {
+    for (uint8_t x = x1; x < x2; x++) {
+      if (y == 0) {
+	printf("trying to load kernel to io core (%d, %d)\n", x, y);
+	assert(0);
+      }
 
+      // start kernel with origin
+      hb_mc_freeze(fd, x, y);
+      hb_mc_set_tile_group_origin(fd, x, y, origin_x, origin_y);
+      hb_mc_load_binary(fd, manycore_program, &x, &y, 1);
+    }
+  }
+}
 
 void waitForKernel(uint8_t fd, int numTiles) {
     // assuming each tile will send 1 bsg_finish packet, we should wait 
@@ -127,4 +145,19 @@ void waitForKernel(uint8_t fd, int numTiles) {
         hb_mc_read_fifo(fd, 1, (hb_mc_packet_t *) &manycore_finish);
         printReqPkt(&manycore_finish);
     }
+}
+
+void hammaRunMultiple(uint8_t fd, int x1, int y1, int x2, int y2) {
+  // start all of the tiles
+  for (int y = y1; y < y2; y++) {
+    for (int x = x1; x < x2; x++) {
+      hb_mc_unfreeze(fd, x, y);
+    }
+  }
+
+  int num_tiles = (x2 - x1) * (y2 - y1);
+  
+  // recv a packet from each tile marking their completion
+  waitForKernel(fd, num_tiles); 
+
 }
