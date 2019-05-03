@@ -9,6 +9,7 @@ author-email = "asampson@cs.cornell.edu"
 requires = [
     "click",
     "boto3",
+    "click-log",
 ]
 
 [tool.flit.scripts]

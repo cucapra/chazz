@@ -9,6 +9,8 @@ import subprocess
 import socket
 import time
 import os
+import logging
+import click_log
 
 __version__ = '1.0.0'
 
@@ -39,6 +41,11 @@ SSH_PORT = 22
 SETUP_SCRIPT = os.path.join(os.path.dirname(__file__), 'setup.sh')
 
 
+# Logger.
+log = logging.getLogger(__name__)
+click_log.basic_config(log)
+
+
 class State(enum.IntEnum):
     """The EC2 instance state codes.
     """
@@ -65,10 +72,10 @@ def test_connect(host, port, timeout=2):
     try:
         sock = socket.create_connection((host, port), timeout)
     except ConnectionRefusedError:
-        print('connection refused')
+        log.debug('connection refused')
         return False
     except socket.timeout:
-        print('connection timeout')
+        log.debug('connection timeout')
         return False
     else:
         sock.close()
@@ -80,7 +87,7 @@ def host_wait(host, port, interval=10):
     attempting to connect every `interval` seconds.
     """
     while not test_connect(host, port):
-        print('{} not yet up on port {}'.format(host, port))
+        log.debug('{} not yet up on port {}'.format(host, port))
         time.sleep(interval)
 
 
@@ -154,16 +161,16 @@ def get_running_instance(ec2, ami_ids):
 
     if inst:
         iid = inst['InstanceId']
-        print('found existing instance {}'.format(iid))
+        log.info('found existing instance {}'.format(iid))
 
         if inst['State']['Code'] == State.RUNNING:
             return inst
 
         elif inst['State']['Code'] == State.STOPPED:
-            print('instance is stopped; starting')
+            log.info('instance is stopped; starting')
             ec2.start_instances(InstanceIds=[iid])
 
-            print('waiting for instance to start')
+            log.info('waiting for instance to start')
             instance_wait(ec2, iid)
 
             # "Refresh" the instance so we have its hostname.
@@ -175,10 +182,10 @@ def get_running_instance(ec2, ami_ids):
             )
 
     else:
-        print('no existing instance; creating a new one')
+        log.info('no existing instance; creating a new one')
         inst = create_instance(ec2, ami_ids)
 
-        print('waiting for new instance to start')
+        log.info('waiting for new instance to start')
         instance_wait(ec2, inst['InstanceId'])
 
         return get_instance(ec2, inst['InstanceId'])
@@ -219,7 +226,7 @@ def scp_command(src, host, dest):
 def run_setup(host):
     """Set up the host by copying our setup script and running it.
     """
-    print('running setup script')
+    log.info('running setup script')
 
     # Read the setup script.
     with open(SETUP_SCRIPT, 'rb') as f:
@@ -227,7 +234,7 @@ def run_setup(host):
 
     # Pipe the command into sh on the host.
     sh_cmd = ssh_command(host) + ['sh']
-    print(fmt_cmd(sh_cmd))
+    log.debug(fmt_cmd(sh_cmd))
     subprocess.run(sh_cmd, input=setup_script)
 
 
@@ -243,6 +250,7 @@ def _fmt_inst(inst):
               help='An AMI ID for HammerBlade images.')
 @click.option('-i', '--image', multiple=True, type=int,
               help='An image index to use (exclusively).')
+@click_log.simple_verbosity_option(log)
 def chazz(ctx, ami, image):
     """Run HammerBlade on F1."""
     ctx.ensure_object(dict)
@@ -271,7 +279,7 @@ def ssh(ctx):
 
     # Run the interactive SSH command.
     cmd = ssh_command(host)
-    print(fmt_cmd(cmd))
+    log.info(fmt_cmd(cmd))
     subprocess.run(cmd)
 
 
@@ -331,13 +339,13 @@ def stop(ctx, wait, terminate):
         iid = inst['InstanceId']
         if terminate:
             if inst['State']['Code'] != State.TERMINATED:
-                print('terminating {}'.format(iid))
+                log.info('terminating {}'.format(iid))
                 ec2.terminate_instances(InstanceIds=[iid])
                 if wait:
                     instance_wait(ec2, iid, 'instance_terminated')
         else:
             if inst['State']['Code'] == State.RUNNING:
-                print('stopping {}'.format(iid))
+                log.info('stopping {}'.format(iid))
                 ec2.stop_instances(InstanceIds=[iid])
                 if wait:
                     instance_wait(ec2, iid, 'instance_stopped')
