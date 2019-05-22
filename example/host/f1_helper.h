@@ -12,9 +12,7 @@
 #include <bsg_manycore_loader.h>
 #include <bsg_manycore_mem.h>
 #include <bsg_manycore_errno.h>
-
-// this is ahead of current image, but cherry-pick it to curr dir
-#include "bsg_manycore_elf.h"
+#include <bsg_manycore_elf.h>
 
 typedef enum transfer_type {
     deviceToHost = 0,
