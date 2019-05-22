@@ -34,7 +34,7 @@ proc_exe_logs: X0_Y0.pelog X1_Y0.pelog
 OBJECT_FILES=main.o bsg_set_tile_x_y.o bsg_printf.o
 
 #include /home/centos/bsg_bladerunner/bsg_manycore_3903da0/software/spmd/Makefile.include
-export BSG_MANYCORE_DIR=/home/centos/bsg_bladerunner/bsg_manycore_3903da0
+BSG_MANYCORE_DIR := $(wildcard /home/centos/bsg_bladerunner/bsg_manycore_*)
 include $(BSG_MANYCORE_DIR)/software/mk/Makefile.dimensions
 include $(BSG_MANYCORE_DIR)/software/mk/Makefile.paths
 include $(BSG_MANYCORE_DIR)/software/mk/Makefile.builddefs
