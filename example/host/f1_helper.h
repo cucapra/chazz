@@ -22,13 +22,12 @@ typedef enum transfer_type {
 void printReqPkt(hb_mc_request_packet_t *pkt) {
     uint32_t addr = hb_mc_request_packet_get_addr(pkt);
     uint32_t data = hb_mc_request_packet_get_data(pkt);
-    uint32_t op_ex = hb_mc_request_packet_get_op(pkt);
     uint32_t x_src = hb_mc_request_packet_get_x_src(pkt);
     uint32_t y_src = hb_mc_request_packet_get_y_src(pkt);
     uint32_t x_dst = hb_mc_request_packet_get_x_dst(pkt);
     uint32_t y_dst = hb_mc_request_packet_get_y_dst(pkt);
     uint32_t op = hb_mc_request_packet_get_op(pkt);
-    printf("Manycore request packet: Address 0x%x at coordinates (0x%x, 0x%x) from (0x%x, 0x%x). Operation: 0x%x, Op_ex: 0x%x, Data: 0x%x\n", addr, x_dst, y_dst, x_src, y_src, op, op_ex, data);
+    printf("Manycore request packet: Address 0x%x at coordinates (0x%x, 0x%x) from (0x%x, 0x%x). Operation: 0x%x, Data: 0x%x\n", addr, x_dst, y_dst, x_src, y_src, op, data);
 }
 
 void printRespPkt(hb_mc_response_packet_t *pkt) {
