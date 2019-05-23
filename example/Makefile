@@ -16,7 +16,7 @@ HOST_OBJS := $(HOST_SRCS:.c=.o)
 CFLAGS := -std=c11 -lbsg_manycore_runtime
 HOST_TARGET := host
 
-$(HOST_TARGET): $(OBJS)
+$(HOST_TARGET): $(HOST_OBJS)
 	cc $^ $(CFLAGS) -o $@
 
 $(HOST_OBJS): %.o: %.c
