@@ -23,13 +23,8 @@ $(HOST_OBJS): %.o: %.c
 	cc $(CFLAGS) -c -o $@ $<
 
 
-# Set up bsg_manycore Make infrastructure.
+# Include bsg_manycore Make infrastructure.
 
-# Tile group.
-bsg_tiles_org_X = 1
-bsg_tiles_org_Y = 1
-
-# Tile group size.
 bsg_tiles_X := 4
 bsg_tiles_Y := 3
 
