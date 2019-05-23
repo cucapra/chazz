@@ -105,6 +105,35 @@ void hammaMemcpy(uint8_t fd, uint32_t x, uint32_t y, uint32_t virtualAddr, void 
   }
 } 
 
+// **********************************************************************
+// cherry-pick unexposed methods from bsg_manycore_mem.cpp
+// **********************************************************************
+
+/*!
+ * returns HB_MC_SUCCESS if eva is a DRAM address and HB_MC_FAIL if not.
+ */
+int hb_mc_eva_is_dram (eva_t eva) {
+  if (hb_mc_get_bits(eva, 31, 1) == 0x1)
+    return HB_MC_SUCCESS;
+  else
+    return HB_MC_FAIL;
+}
+
+/*
+ * returns x coordinate of a DRAM address.
+ */
+uint32_t hb_mc_dram_get_x (eva_t eva) {
+  return hb_mc_get_bits(eva, 29, 2); /* TODO: hardcoded */
+}
+
+/*
+ * returns y coordinate of a DRAM address.
+ */
+uint32_t hb_mc_dram_get_y (eva_t eva) {
+  return hb_mc_get_manycore_dimension_y() + 1;
+}
+
+
 // memcpy to/from given symbol name
 void hammaSymbolMemcpy(uint8_t fd, uint32_t x, uint32_t y, const char *exeName, const char *symName, void *userPtr, uint32_t numBytes, transfer_type_t transferType) {
     // get the device address of relevant variables
@@ -112,6 +141,12 @@ void hammaSymbolMemcpy(uint8_t fd, uint32_t x, uint32_t y, const char *exeName, 
     symbol_to_eva(exeName, symName, &addr);
     printf("Memop with addr: 0x%x\n", addr);
 
+    // check if this is a dram address. if so, we need to mod the x,y coords
+    if (hb_mc_eva_is_dram(addr) == HB_MC_SUCCESS) {
+       x = hb_mc_dram_get_x(addr);
+       y = hb_mc_dram_get_y(addr);
+    }
+    
     hammaMemcpy(fd, x, y, addr, userPtr, numBytes, transferType);
 
 }
