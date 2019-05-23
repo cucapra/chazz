@@ -20,13 +20,14 @@ run: all
 # Build host code with the "normal" compiler.
 
 HOST_OBJS := $(HOST_SRCS:.c=.o)
-CFLAGS := -std=c11 -lbsg_manycore_runtime
+HOST_CFLAGS := -std=c11 -lbsg_manycore_runtime
+HOST_CC := cc
 
 $(HOST_TARGET): $(HOST_OBJS)
-	cc $^ $(CFLAGS) -o $@
+	$(HOST_CC) $(HOST_CFLAGS) $^ -o $@
 
 $(HOST_OBJS): %.o: %.c
-	cc $(CFLAGS) -c -o $@ $<
+	$(HOST_CC) $(HOST_CFLAGS) -c $< -o $@
 
 
 # Include bsg_manycore Make infrastructure.
