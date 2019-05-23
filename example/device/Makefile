@@ -1,24 +1,32 @@
+export BSG_TILES_X=4
+export BSG_TILES_Y=4 
+# one less than bsg_tiles_y
+export BSG_USEFUL_TILES_Y=3
 #########################################################
 # Network Configutaion
 # If not configured, Will use default Values
 #	bsg_global_X ?= $(bsg_tiles_X)
 #	bsg_global_Y ?= $(bsg_tiles_Y)+1
-bsg_global_X = 4
-bsg_global_Y = 4
+bsg_global_X = $(BSG_TILES_X)
+bsg_global_Y = $(BSG_TILES_Y)
 
 #########################################################
 #Tile group configuration
+# this can be specified at runtime though!
 # If not configured, Will use default Values
 #	bsg_tiles_org_X ?= 0
 #	bsg_tiles_org_Y ?= 1
 bsg_tiles_org_X =1
 bsg_tiles_org_Y =1
 
+# group size, this cannot be specified at runtime! Oh no!
+# Can we just set to max possible size and then not use all
+# all of them?
 # If not configured, Will use default Values
 #	bsg_tiles_X ?= 2
 #	bsg_tiles_Y ?= 2
-bsg_tiles_X = 2
-bsg_tiles_Y = 2
+bsg_tiles_X = $(BSG_TILES_X)
+bsg_tiles_Y = $(BSG_USEFUL_TILES_Y)
 
 
 all: main.riscv

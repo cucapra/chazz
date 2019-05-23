@@ -1,59 +1,61 @@
 #include "f1_helper.h"
 
-int main (int argc, char *argv[]) {
-    assert(argc == 2);
-    char *manycore_program = argv[1];
+// 4 x 4 - 4 ( the t p row, in charge of io ) 
+#define X1 0
+#define Y1 1
+#define X2 4
+#define Y2 4
+#define NUM_TILES (X2 - X1) * (Y2 - Y1)
+
+int main(int argc, char *argv[]) {
+  assert(argc == 2);
+  char *manycore_program = argv[1];
+  
+  uint8_t fd;
+  hammaInit(&fd);
+  
+  int dim = 160;
+  int *h_src1 = (int*)malloc(dim * sizeof(int));
+  for(int i = 0; i < dim; i++) {
+    h_src1[i] = i;
+  }
+  int *h_src0 = (int*)malloc(dim * sizeof(int));
+  for(int i = 0; i < dim; i++) {
+    h_src0[i] = i;
+  }
+   
+  hammaLoadMultiple(fd, manycore_program, X1, Y1, X2, Y2);
     
-    uint8_t fd;
-    if (hb_mc_fifo_init(&fd) != HB_MC_SUCCESS) {
-        printf("failed to initialize host.\n");
-        return 0;
-	}
-
-    // host buffers
-    int numBytes = sizeof(int) * 4;
-    int *h_a = (int*)malloc(numBytes);
-    int *h_b = (int*)malloc(numBytes);
-
-    h_a[0] = 234; h_a[1] = 1; h_a[2] = 25; h_a[3] = 101;
-
-    // the top row (row 0) are io cores so dont send them a program. start at (0,1)
-    uint8_t x = 0, y = 1;
-
-    // pause the core
-    hb_mc_tile_freeze(fd, 0, 1);
-
-    hb_mc_tile_set_group_origin(fd, 0, 1, 0, 1);
-
-    // load instructions to manycore
-    printf("file to be loaded is %s\n", manycore_program);
-    // context, binary path, xlist, ylist, numTiles in list
-    hb_mc_load_binary(fd, manycore_program, &x, &y, 1);
-
-
-    // write to core memory
-    hammaSymbolMemcpy(fd, x, y, manycore_program, "tileDataRd", (void*)h_a, numBytes, hostToDevice);
-
-    // start the core
-    hb_mc_tile_unfreeze(fd, 0,1);
-
-    // wait for completion?
-    // timer needed?	
-    //usleep(100); /* 100 us */
-	
-    // wait for the finish (this will be deprecated probably in next version)
-    waitForKernel(fd);
-
-    // read back data
-    hammaSymbolMemcpy(fd, x, y, manycore_program, "tileDataWr", (void*)h_b, numBytes, deviceToHost); 
-    for (int i = 0; i < 4; i++) {
-        printf("%d\n", h_b[i]);
+  // do a data copy of the whole array to tile spads
+  // NOTE -- must be done after loading the kernel to hammerblade
+  for (int y = Y1; y < Y2; y++) {
+    for (int x = X1; x < X2; x++) {
+      hammaSymbolMemcpy(fd, x, y, manycore_program, "g_src1", (void*)h_src1, dim * sizeof(int), hostToDevice);
+      hammaSymbolMemcpy(fd, x, y, manycore_program, "g_src0", (void*)h_src0, dim * sizeof(int), hostToDevice);
     }
+  }
 
-    // free host buffers
-    free(h_a);
-    free(h_b);
+  // run all of the tiles
+  hammaRunMultiple(fd, X1, Y1, X2, Y2);
+    
+  // TEMP -- everytile adds the whole array and we're just copying and check each the same
+  int *h_dest = (int*)malloc(dim * sizeof(int));
 
-    return 0;
+  for (int y = Y1; y < Y2; y++) {
+    for (int x = X1; x < X2; x++) {
+      hammaSymbolMemcpy(fd, x, y, manycore_program, "g_dest", (void*)h_dest, dim * sizeof(int), deviceToHost);
 
+      for (int i = 0; i < dim; i++) {
+	if (h_dest[i] != 2 * i) {
+	  printf("failed at index %d\n", i);
+	  assert(0);
+	}
+      }
+      printf("success (%d, %d)\n", x, y);
+      
+    }
+  }
+  
+  // cleanup host
+  return 0;
 }

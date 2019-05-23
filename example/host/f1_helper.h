@@ -1,3 +1,6 @@
+#ifndef __F1_HELPER_H__
+#define __F1_HELPER_H__
+
 #define _BSD_SOURCE
 #define _XOPEN_SOURCE 500
 
@@ -43,63 +46,63 @@ void printRespPkt(hb_mc_response_packet_t *pkt) {
 // userPtr should already be allocated
 // on hammerblade virtual and physical addresses are the same (i.e. only physical addresses)
 void hammaMemcpy(uint8_t fd, uint32_t x, uint32_t y, uint32_t virtualAddr, void *userPtr, uint32_t numBytes, transfer_type_t transferType) {
-    // calculate the number of packets we're going to need. each packets sends 4 bytes
-    int numPackets = numBytes / 4;
-
-    if (transferType == deviceToHost) {
-		
-        hb_mc_response_packet_t *buf = (hb_mc_response_packet_t*)malloc(sizeof(hb_mc_response_packet_t) * numPackets);
-
-
-        // context, ptr to write to, x, y, virtual address, number of words (how many uint32 / 4 bytes)
-        // for some reason need to shift the address by 2 ( / 4. To reflect that fact that it's word addressable not byte addressable!
-        int read = hb_mc_copy_from_epa(fd, buf, x, y, virtualAddr >> 2, numPackets);
-        
-       	if (read == HB_MC_SUCCESS) {
-		    // we're going to collect all of the data in a uint32_t buffer and then cast it to void
-		    // this should be find b/c every type is <=32-bits.
-		    // If over 64 bits this could result in flipping the first and second halves
+  // calculate the number of packets we're going to need. each packets sends 4 bytes
+  int numPackets = numBytes / 4;
+  
+  if (transferType == deviceToHost) {
+    
+    hb_mc_response_packet_t *buf = (hb_mc_response_packet_t*)malloc(sizeof(hb_mc_response_packet_t) * numPackets);
+    
+    
+    // context, ptr to write to, x, y, virtual address, number of words (how many uint32 / 4 bytes)
+    // for some reason need to shift the address by 2 ( / 4. To reflect that fact that it's word addressable not byte addressable!
+    int read = hb_mc_copy_from_epa(fd, buf, x, y, virtualAddr >> 2, numPackets);
+    
+    if (read == HB_MC_SUCCESS) {
+      // we're going to collect all of the data in a uint32_t buffer and then cast it to void
+      // this should be find b/c every type is <=32-bits.
+      // If over 64 bits this could result in flipping the first and second halves
+      
+      // store data from the packets in the provided memory
+      // the data is in bytes [9,6].
+      for (int i = 0; i < numPackets; i++) {
+	// printRespPkt(&(buf[i]));
 	
-            // store data from the packets in the provided memory
-            // the data is in bytes [9,6].
-            for (int i = 0; i < numPackets; i++) {
-                // printRespPkt(&(buf[i]));
-
-                uint32_t data = hb_mc_response_packet_get_data(&(buf[i]));
-
-                // put the data into the container
-                // printf("data: %x\n", data);
-                ((uint32_t*)userPtr)[i] = data;
-            }
-        }
-        else {
-            printf("read from tile failed %x.\n", virtualAddr);
-		    assert(0);
-        }		
-
-        // free memory
-        free(buf);
-    }
-    else if (transferType == hostToDevice) {
-        uint32_t *data = (uint32_t *) calloc(numPackets, sizeof(uint32_t));
-
-        for (int i = 0; i < numPackets; i++) {
-            data[i] = ((uint32_t*)userPtr)[i];
-            //printf("sent packet %d: 0x%x\n", i, data[i]);
-        }
-
-        // store data in tile
-        int write = hb_mc_copy_to_epa(fd, x, y, virtualAddr >> 2, data, numPackets);
-
-        free(data);
-        if (write != HB_MC_SUCCESS) {
-            printf("writing data to tile (%d, %d)'s DMEM failed.\n", x, y);
-            assert(0);
-        }
+	uint32_t data = hb_mc_response_packet_get_data(&(buf[i]));
+	
+	// put the data into the container
+	// printf("data: %x\n", data);
+	((uint32_t*)userPtr)[i] = data;
+      }
     }
     else {
-        assert(0);
+      printf("read from tile failed %x.\n", virtualAddr);
+	  assert(0);
+    }		
+    
+    // free memory
+    free(buf);
+  }
+  else if (transferType == hostToDevice) {
+    uint32_t *data = (uint32_t *) calloc(numPackets, sizeof(uint32_t));
+    
+    for (int i = 0; i < numPackets; i++) {
+      data[i] = ((uint32_t*)userPtr)[i];
+      //printf("sent packet %d: 0x%x\n", i, data[i]);
     }
+    
+    // store data in tile
+    int write = hb_mc_copy_to_epa(fd, x, y, virtualAddr >> 2, data, numPackets);
+    
+    free(data);
+    if (write != HB_MC_SUCCESS) {
+      printf("writing data to tile (%d, %d)'s DMEM failed.\n", x, y);
+      assert(0);
+    }
+  }
+  else {
+    assert(0);
+  }
 } 
 
 // memcpy to/from given symbol name
@@ -115,9 +118,55 @@ void hammaSymbolMemcpy(uint8_t fd, uint32_t x, uint32_t y, const char *exeName, 
 
 
 
-void waitForKernel(uint8_t fd) {
+void waitForKernel(uint8_t fd, int numTiles) {
+  for (int i = 0; i < numTiles; i++) {
     hb_mc_request_packet_t manycore_finish;
     hb_mc_fifo_receive(fd, 1, (hb_mc_packet_t *) &manycore_finish);
-
     printReqPkt(&manycore_finish);
+  }
 }
+
+// load kernels onto multiple cores on the hammerblade in (but don't run)
+void hammaLoadMultiple(uint8_t fd, char *manycore_program, int x1, int y1, int x2, int y2) {
+  int origin_x = x1;
+  int origin_y = y1;
+  for (uint8_t y = y1; y < y2; y++) {
+    for (uint8_t x = x1; x < x2; x++) {
+      if (y == 0) {
+	printf("trying to load kernel to io core (%d, %d)\n", x, y);
+	assert(0);
+      }
+
+      // start kernel with origin
+      hb_mc_tile_freeze(fd, x, y);
+      hb_mc_tile_set_group_origin(fd, x, y, origin_x, origin_y);
+      hb_mc_load_binary(fd, manycore_program, &x, &y, 1);
+    }
+  }
+}
+
+// run all of the current kernels of multiple tiles
+void hammaRunMultiple(uint8_t fd, int x1, int y1, int x2, int y2) {
+  // start all of the tiles
+  for (int y = y1; y < y2; y++) {
+    for (int x = x1; x < x2; x++) {
+      hb_mc_tile_unfreeze(fd, x, y);
+    }
+  }
+
+  int num_tiles = (x2 - x1) * (y2 - y1);
+
+  // recv a packet from each tile marking their completion
+  waitForKernel(fd, num_tiles); 
+
+}
+
+// initalize the hammerblade instance
+void hammaInit(uint8_t *fd) {
+  if (hb_mc_fifo_init(fd) != HB_MC_SUCCESS) {
+    printf("failed to initialize host.\n");
+    assert(0);
+  }
+}
+
+#endif
