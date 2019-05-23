@@ -1,20 +1,26 @@
+HOST_SRCS := run_manycore_program.c
+HOST_TARGET := host
+DEVICE_SRCS := main.c
+DEVICE_TARGET := main
+
+
+# Main targets.
+
 .PHONY: all clean run
 
-all: main.riscv host
+all: $(DEVICE_TARGET).riscv $(HOST_TARGET)
 
 clean:
-	rm -rf *.o host *.riscv
+	rm -rf *.o $(HOST_TARGET) *.riscv
 
 run: all
-	sudo ./host ./main.riscv
+	sudo ./$(HOST_TARGET) ./$(DEVICE_TARGET).riscv
 
 
 # Build host code with the "normal" compiler.
 
-HOST_SRCS := run_manycore_program.c
 HOST_OBJS := $(HOST_SRCS:.c=.o)
 CFLAGS := -std=c11 -lbsg_manycore_runtime
-HOST_TARGET := host
 
 $(HOST_TARGET): $(HOST_OBJS)
 	cc $^ $(CFLAGS) -o $@
@@ -36,10 +42,9 @@ include $(BSG_MANYCORE_DIR)/software/mk/Makefile.builddefs
 
 # Build device binary.
 
-OBJECT_FILES := main.o bsg_set_tile_x_y.o bsg_printf.o
-TARGET := main
+OBJECT_FILES := $(DEVICE_SRCS:.c=.o) bsg_set_tile_x_y.o bsg_printf.o
 
-$(TARGET).riscv: $(OBJECT_FILES) $(SPMD_COMMON_OBJECTS) $(BSG_MANYCORE_DIR)/software/spmd/common/crt.o
+$(DEVICE_TARGET).riscv: $(OBJECT_FILES) $(SPMD_COMMON_OBJECTS) $(BSG_MANYCORE_DIR)/software/spmd/common/crt.o
 	$(RISCV_LINK) $(OBJECT_FILES) $(SPMD_COMMON_OBJECTS) -o $@ $(RISCV_LINK_OPTS)
 
 $(OBJECT_FILES): %.o: %.c
