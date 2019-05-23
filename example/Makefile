@@ -42,10 +42,10 @@ include $(BSG_MANYCORE_DIR)/software/mk/Makefile.builddefs
 
 # Build device binary.
 
-OBJECT_FILES := $(DEVICE_SRCS:.c=.o) bsg_set_tile_x_y.o bsg_printf.o
+DEVICE_OBJS := $(DEVICE_SRCS:.c=.o)
 
-$(DEVICE_TARGET).riscv: $(OBJECT_FILES) $(SPMD_COMMON_OBJECTS) $(BSG_MANYCORE_DIR)/software/spmd/common/crt.o
-	$(RISCV_LINK) $(OBJECT_FILES) $(SPMD_COMMON_OBJECTS) -o $@ $(RISCV_LINK_OPTS)
+$(DEVICE_TARGET).riscv: $(DEVICE_OBJS) $(BSG_MANYCORE_LIB_OBJS)
+	$(RISCV_LINK) $(RISCV_LINK_OPTS) $^ -o $@
 
 $(OBJECT_FILES): %.o: %.c
-	$(RISCV_GCC) $(RISCV_GCC_OPTS) $(OPT_LEVEL) $(spmd_defs) -c $(INCS) $< -o $@
+	$(RISCV_GCC) $(RISCV_GCC_OPTS) $(OPT_LEVEL) $(spmd_defs) -c $< -o $@
