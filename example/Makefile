@@ -25,24 +25,13 @@ $(HOST_OBJS): %.o: %.c
 
 # Set up bsg_manycore Make infrastructure.
 
-BSG_TILES_X := 4
-BSG_TILES_Y := 4
-BSG_USEFUL_TILES_Y := 3
-
-# Network.
-bsg_global_X = $(BSG_TILES_X)
-bsg_global_Y = $(BSG_TILES_Y)
-
 # Tile group.
 bsg_tiles_org_X = 1
 bsg_tiles_org_Y = 1
 
-# Group size.
-bsg_tiles_X = $(BSG_TILES_X)
-bsg_tiles_Y = $(BSG_USEFUL_TILES_Y)
-
-# FPU option.
-BSG_FPU_OP = 0
+# Tile group size.
+bsg_tiles_X := 4
+bsg_tiles_Y := 3
 
 BSG_MANYCORE_DIR := $(wildcard /home/centos/bsg_bladerunner/bsg_manycore_*)
 include $(BSG_MANYCORE_DIR)/software/mk/Makefile.dimensions
