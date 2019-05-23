@@ -1,20 +1,20 @@
 HOST_SRCS := run_manycore_program.c
 HOST_TARGET := host
 DEVICE_SRCS := main.c
-DEVICE_TARGET := main
+DEVICE_TARGET := main.riscv
 
 
 # Main targets.
 
 .PHONY: all clean run
 
-all: $(DEVICE_TARGET).riscv $(HOST_TARGET)
+all: $(DEVICE_TARGET) $(HOST_TARGET)
 
 clean:
-	rm -rf *.o $(HOST_TARGET) *.riscv
+	rm -rf *.o $(HOST_TARGET) $(DEVICE_TARGET)
 
 run: all
-	sudo ./$(HOST_TARGET) ./$(DEVICE_TARGET).riscv
+	sudo ./$(HOST_TARGET) ./$(DEVICE_TARGET)
 
 
 # Build host code with the "normal" compiler.
@@ -46,7 +46,7 @@ include $(BSG_MANYCORE_DIR)/software/mk/Makefile.builddefs
 
 DEVICE_OBJS := $(DEVICE_SRCS:.c=.o)
 
-$(DEVICE_TARGET).riscv: $(DEVICE_OBJS) $(BSG_MANYCORE_LIB_OBJS)
+$(DEVICE_TARGET): $(DEVICE_OBJS) $(BSG_MANYCORE_LIB_OBJS)
 	$(RISCV_LINK) $(RISCV_LINK_OPTS) $^ -o $@
 
 $(OBJECT_FILES): %.o: %.c
