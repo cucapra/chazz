@@ -11,7 +11,7 @@ DEVICE_TARGET := main.riscv
 all: $(DEVICE_TARGET) $(HOST_TARGET)
 
 clean:
-	rm -rf *.o $(HOST_TARGET) $(DEVICE_TARGET)
+	rm -rf $(HOST_OBJS) $(DEVICE_OBJS_ALL) $(HOST_TARGET) $(DEVICE_TARGET)
 
 run: all
 	sudo ./$(HOST_TARGET) ./$(DEVICE_TARGET)
@@ -45,8 +45,9 @@ include $(BSG_MANYCORE_DIR)/software/mk/Makefile.builddefs
 # Build device binary.
 
 DEVICE_OBJS := $(DEVICE_SRCS:.c=.o)
+DEVICE_OBJS_ALL := $(DEVICE_OBJS) $(BSG_MANYCORE_LIB_OBJS)
 
-$(DEVICE_TARGET): $(DEVICE_OBJS) $(BSG_MANYCORE_LIB_OBJS)
+$(DEVICE_TARGET): $(DEVICE_OBJS_ALL)
 	$(RISCV_LINK) $(RISCV_LINK_OPTS) $^ -o $@
 
 $(OBJECT_FILES): %.o: %.c
