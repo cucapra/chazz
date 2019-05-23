@@ -5,7 +5,7 @@ int main (int argc, char *argv[]) {
     char *manycore_program = argv[1];
     
     uint8_t fd;
-    if (hb_mc_init_host(&fd) != HB_MC_SUCCESS) {
+    if (hb_mc_fifo_init(&fd) != HB_MC_SUCCESS) {
         printf("failed to initialize host.\n");
         return 0;
 	}
@@ -21,9 +21,9 @@ int main (int argc, char *argv[]) {
     uint8_t x = 0, y = 1;
 
     // pause the core
-    hb_mc_freeze(fd, 0, 1);
+    hb_mc_tile_freeze(fd, 0, 1);
 
-    hb_mc_set_tile_group_origin(fd, 0, 1, 0, 1);
+    hb_mc_tile_set_group_origin(fd, 0, 1, 0, 1);
 
     // load instructions to manycore
     printf("file to be loaded is %s\n", manycore_program);
@@ -35,7 +35,7 @@ int main (int argc, char *argv[]) {
     hammaSymbolMemcpy(fd, x, y, manycore_program, "tileDataRd", (void*)h_a, numBytes, hostToDevice);
 
     // start the core
-    hb_mc_unfreeze(fd, 0,1);
+    hb_mc_tile_unfreeze(fd, 0,1);
 
     // wait for completion?
     // timer needed?	

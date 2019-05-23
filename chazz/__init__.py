@@ -17,9 +17,12 @@ __version__ = '1.0.0'
 # HammerBlade AMI IDs we have available. Put the "best" image first:
 # this is the one we'll use to start new instances.
 HB_AMI_IDS = [
-    'ami-0270f06e16bfee050',
-    'ami-0ce51e94bbeba2650',
-    'ami-0c7ccefee8f931530',
+    'ami-0ebfadb08765d6ddf',  # v0.4.2
+    'ami-0e1d91c72cabb5b3f',  # 20190511
+    'ami-0343798c9b9136e4e',  # 20190510
+    'ami-0270f06e16bfee050',  # 20190417
+    'ami-0ce51e94bbeba2650',  # 20190405 (target for our example)
+    'ami-0c7ccefee8f931530',  # 20190319
 ]
 
 # Some AWS parameters.
