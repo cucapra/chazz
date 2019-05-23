@@ -48,7 +48,6 @@ BSG_MANYCORE_DIR := $(wildcard /home/centos/bsg_bladerunner/bsg_manycore_*)
 include $(BSG_MANYCORE_DIR)/software/mk/Makefile.dimensions
 include $(BSG_MANYCORE_DIR)/software/mk/Makefile.paths
 include $(BSG_MANYCORE_DIR)/software/mk/Makefile.builddefs
-include $(BSG_MANYCORE_DIR)/software/mk/Makefile.filelist
 
 
 # Build device binary.
