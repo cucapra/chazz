@@ -245,7 +245,7 @@ def _fmt_inst(inst):
               help='An AMI ID for HammerBlade images.')
 @click.option('-i', '--image', multiple=True, type=int,
               help='An image index to use (exclusively).')
-@click.option('-k', '--key-pair', metavar='NAME',
+@click.option('-k', '--key-pair', metavar='NAME', default='ironcheese',
               help='Name of the AWS key pair to add to new instances.')
 @click_log.simple_verbosity_option(log)
 def chazz(ctx, ami, image, key_pair):
