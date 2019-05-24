@@ -259,6 +259,7 @@ def chazz(ctx, ami, image, key_pair, security_group):
         key_name=key_pair,
         security_group=security_group,
     )
+    log.debug('%s', ctx.obj)
 
 
 @chazz.command()
