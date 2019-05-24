@@ -11,13 +11,12 @@
 
 #include "bsg_manycore.h"
 #include "bsg_set_tile_x_y.h"
-
 //------------------------------------------------------------------------
 // Global data
 //------------------------------------------------------------------------
 
 // Define Vectors in SPADs.
-#define dim 160
+#define dim 10
 int g_src0[dim]; 
 int g_src1[dim];
 int g_dest[dim];
