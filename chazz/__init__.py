@@ -21,7 +21,7 @@ HB_AMI_IDS = [
     'ami-0e1d91c72cabb5b3f',  # 20190511
     'ami-0343798c9b9136e4e',  # 20190510
     'ami-0270f06e16bfee050',  # 20190417
-    'ami-0ce51e94bbeba2650',  # 20190405 (target for our example)
+    'ami-0ce51e94bbeba2650',  # 20190405
     'ami-0c7ccefee8f931530',  # 20190319
 ]
 
