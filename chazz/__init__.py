@@ -11,6 +11,7 @@ import time
 import os
 import logging
 import click_log
+from collections import namedtuple
 
 __version__ = '1.0.0'
 
@@ -21,15 +22,13 @@ HB_AMI_IDS = [
     'ami-0e1d91c72cabb5b3f',  # 20190511
     'ami-0343798c9b9136e4e',  # 20190510
     'ami-0270f06e16bfee050',  # 20190417
-    'ami-0ce51e94bbeba2650',  # 20190405 (target for our example)
+    'ami-0ce51e94bbeba2650',  # 20190405
     'ami-0c7ccefee8f931530',  # 20190319
 ]
 
 # Some AWS parameters.
 AWS_REGION = 'us-west-2'  # The Oregon region.
 EC2_TYPE = 'f1.2xlarge'  # Launch the smallest kind of F1 instance.
-KEY_NAME = 'ironcheese'  # The name of the EC2 keypair.
-SECURITY_GROUP = 'chazz'  # The name of a security group that allows SSH.
 
 # The path to the private key file to use for SSH. We use the
 # environment variable if it's set and this filename otherwise.
@@ -47,6 +46,16 @@ SETUP_SCRIPT = os.path.join(os.path.dirname(__file__), 'setup.sh')
 # Logger.
 log = logging.getLogger(__name__)
 click_log.basic_config(log)
+
+
+# Configuration object.
+Config = namedtuple("Config", [
+    'ec2',  # Boto EC2 client object.
+    'ami_ids',  # List of AMIs to look for (and start).
+    'ssh_key',  # Path to the SSH private key file.
+    'key_name',  # The EC2 keypair name.
+    'security_group',  # AWS security group (which must allow SSH).
+])
 
 
 class State(enum.IntEnum):
@@ -103,12 +112,12 @@ def get_instances(ec2):
             yield inst
 
 
-def get_hb_instances(ec2, ami_ids):
+def get_hb_instances(config):
     """Generate the current EC2 instances based on any of the
     HammerBlade AMIs.
     """
-    for inst in get_instances(ec2):
-        if inst['ImageId'] in ami_ids:
+    for inst in get_instances(config.ec2):
+        if inst['ImageId'] in config.ami_ids:
             yield inst
 
 
@@ -119,11 +128,11 @@ def get_instance(ec2, instance_id):
     return r['Reservations'][0]['Instances'][0]
 
 
-def get_hb_instance(ec2, ami_ids):
+def get_hb_instance(config):
     """Return *some* existing HammerBlade EC2 instance, if one exists.
     Otherwise, return None.
     """
-    for inst in get_hb_instances(ec2, ami_ids):
+    for inst in get_hb_instances(config):
         if inst['State']['Code'] in (State.TERMINATED, State.SHUTTING_DOWN):
             # Ignore terminated instances.
             continue
@@ -141,26 +150,26 @@ def instance_wait(ec2, instance_id, until='instance_running'):
     waiter.wait(InstanceIds=[instance_id])
 
 
-def create_instance(ec2, ami_ids):
+def create_instance(config):
     """Create (and start) a new HammerBlade EC2 instance.
     """
-    res = ec2.run_instances(
-        ImageId=ami_ids[0],
+    res = config.ec2.run_instances(
+        ImageId=config.ami_ids[0],
         InstanceType=EC2_TYPE,
         MinCount=1,
         MaxCount=1,
-        KeyName=KEY_NAME,
-        SecurityGroups=[SECURITY_GROUP],
+        KeyName=config.key_name,
+        SecurityGroups=[config.security_group],
     )
     assert len(res['Instances']) == 1
     return res['Instances'][0]
 
 
-def get_running_instance(ec2, ami_ids):
+def get_running_instance(config):
     """Get a *running* HammerBlade EC2 instance, starting a new one or
     booting up an old one if necessary.
     """
-    inst = get_hb_instance(ec2, ami_ids)
+    inst = get_hb_instance(config)
 
     if inst:
         iid = inst['InstanceId']
@@ -171,13 +180,13 @@ def get_running_instance(ec2, ami_ids):
 
         elif inst['State']['Code'] == State.STOPPED:
             log.info('instance is stopped; starting')
-            ec2.start_instances(InstanceIds=[iid])
+            config.ec2.start_instances(InstanceIds=[iid])
 
             log.info('waiting for instance to start')
-            instance_wait(ec2, iid)
+            instance_wait(config.ec2, iid)
 
             # "Refresh" the instance so we have its hostname.
-            return get_instance(ec2, iid)
+            return get_instance(config.ec2, iid)
 
         else:
             raise NotImplementedError(
@@ -186,17 +195,12 @@ def get_running_instance(ec2, ami_ids):
 
     else:
         log.info('no existing instance; creating a new one')
-        inst = create_instance(ec2, ami_ids)
+        inst = create_instance(config)
 
         log.info('waiting for new instance to start')
-        instance_wait(ec2, inst['InstanceId'])
+        instance_wait(config.ec2, inst['InstanceId'])
 
-        return get_instance(ec2, inst['InstanceId'])
-
-
-def _ssh_key():
-    """Get the path to the SSH key file."""
-    return os.environ.get(KEY_ENVVAR, KEY_FILE)
+        return get_instance(config.ec2, inst['InstanceId'])
 
 
 def _ssh_host(host):
@@ -204,29 +208,17 @@ def _ssh_host(host):
     return '{}@{}'.format(USER, host)
 
 
-def ssh_command(host):
+def ssh_command(config, host):
     """Construct a command for SSHing into an EC2 instance.
     """
     return [
         'ssh',
-        '-i', _ssh_key(),
+        '-i', config.ssh_key,
         _ssh_host(host),
     ]
 
 
-def scp_command(src, host, dest):
-    """Construct an scp command for copying a local file to a remote
-    host.
-    """
-    return [
-        'scp',
-        '-i', _ssh_key(),
-        src,
-        '{}:{}'.format(_ssh_host(host), dest),
-    ]
-
-
-def run_setup(host):
+def run_setup(config, host):
     """Set up the host by copying our setup script and running it.
     """
     log.info('running setup script')
@@ -236,7 +228,7 @@ def run_setup(host):
         setup_script = f.read()
 
     # Pipe the command into sh on the host.
-    sh_cmd = ssh_command(host) + ['sh']
+    sh_cmd = ssh_command(config, host) + ['sh']
     log.debug(fmt_cmd(sh_cmd))
     subprocess.run(sh_cmd, input=setup_script)
 
@@ -253,48 +245,56 @@ def _fmt_inst(inst):
               help='An AMI ID for HammerBlade images.')
 @click.option('-i', '--image', multiple=True, type=int,
               help='An image index to use (exclusively).')
-@click_log.simple_verbosity_option(log)
-def chazz(ctx, ami, image):
+@click.option('--key-pair', metavar='NAME', default='ironcheese',
+              help='Name of the AWS key pair to add to new instances.')
+@click.option('--security-group', metavar='NAME', default='chazz',
+              help='An AWS security group that allows SSH.')
+@click.option('-v', '--verbose', is_flag=True, default=False,
+              help='Include debug output.')
+def chazz(ctx, verbose, ami, image, key_pair, security_group):
     """Run HammerBlade on F1."""
-    ctx.ensure_object(dict)
-    ctx.obj['EC2'] = boto3.client('ec2', region_name=AWS_REGION)
-    if image:
-        ctx.obj['AMI_IDS'] = [HB_AMI_IDS[i] for i in image]
+    if verbose:
+        log.setLevel(logging.DEBUG)
     else:
-        ctx.obj['AMI_IDS'] = ami
+        log.setLevel(logging.INFO)
+
+    ctx.obj = Config(
+        ec2=boto3.client('ec2', region_name=AWS_REGION),
+        ami_ids=[HB_AMI_IDS[i] for i in image] if image else ami,
+        ssh_key=os.environ.get(KEY_ENVVAR, KEY_FILE),
+        key_name=key_pair,
+        security_group=security_group,
+    )
+    log.debug('%s', ctx.obj)
 
 
 @chazz.command()
-@click.pass_context
-def ssh(ctx):
+@click.pass_obj
+def ssh(config):
     """Connect to a HammerBlade instance with SSH.
     """
-    ec2 = ctx.obj['EC2']
-
-    inst = get_running_instance(ec2, ctx.obj['AMI_IDS'])
+    inst = get_running_instance(config)
     host = inst['PublicDnsName']
 
     # Wait for the host to start its SSH server.
     host_wait(host, SSH_PORT)
 
     # Set up the VM.
-    run_setup(host)
+    run_setup(config, host)
 
     # Run the interactive SSH command.
-    cmd = ssh_command(host)
+    cmd = ssh_command(config, host)
     log.info(fmt_cmd(cmd))
     subprocess.run(cmd)
 
 
 @chazz.command()
-@click.pass_context
+@click.pass_obj
 @click.argument('cmd', required=False, default='exec "$SHELL"')
-def shell(ctx, cmd):
+def shell(config, cmd):
     """Launch a shell for convenient SSH invocation.
     """
-    ec2 = ctx.obj['EC2']
-
-    inst = get_running_instance(ec2, ctx.obj['AMI_IDS'])
+    inst = get_running_instance(config)
     host = inst['PublicDnsName']
 
     cmd = [
@@ -304,76 +304,71 @@ def shell(ctx, cmd):
     subprocess.run(cmd, env={
         'HB': _ssh_host(host),
         'HB_HOST': host,
-        'HB_KEY': os.path.abspath(_ssh_key()),
+        'HB_KEY': os.path.abspath(config.ssh_key),
     })
 
 
 @chazz.command()
-@click.pass_context
-def start(ctx):
+@click.pass_obj
+def start(config):
     """Ensure that a HammerBlade instance is running.
     """
-    ec2 = ctx.obj['EC2']
-    inst = get_running_instance(ec2, ctx.obj['AMI_IDS'])
+    inst = get_running_instance(config)
     print(_fmt_inst(inst))
 
 
 @chazz.command()
-@click.pass_context
-def list(ctx):
+@click.pass_obj
+def list(config):
     """Show the available HammerBlade instances.
     """
-    ec2 = ctx.obj['EC2']
-    for inst in get_hb_instances(ec2, ctx.obj['AMI_IDS']):
+    for inst in get_hb_instances(config):
         print(_fmt_inst(inst))
 
 
 @chazz.command()
-@click.pass_context
+@click.pass_obj
 @click.option('--wait/--no-wait', default=False,
               help='Wait for the instances to stop.')
 @click.option('--terminate/--stop', default=False,
               help='Destroy the instance, or just stop it (the default).')
-def stop(ctx, wait, terminate):
+def stop(config, wait, terminate):
     """Stop all running HammerBlade instances.
     """
-    ec2 = ctx.obj['EC2']
-    for inst in get_hb_instances(ec2, ctx.obj['AMI_IDS']):
+    for inst in get_hb_instances(config):
         iid = inst['InstanceId']
         if terminate:
             if inst['State']['Code'] != State.TERMINATED:
                 log.info('terminating {}'.format(iid))
-                ec2.terminate_instances(InstanceIds=[iid])
+                config.ec2.terminate_instances(InstanceIds=[iid])
                 if wait:
-                    instance_wait(ec2, iid, 'instance_terminated')
+                    instance_wait(config.ec2, iid, 'instance_terminated')
         else:
             if inst['State']['Code'] == State.RUNNING:
                 log.info('stopping {}'.format(iid))
-                ec2.stop_instances(InstanceIds=[iid])
+                config.ec2.stop_instances(InstanceIds=[iid])
                 if wait:
-                    instance_wait(ec2, iid, 'instance_stopped')
+                    instance_wait(config.ec2, iid, 'instance_stopped')
 
 
 @chazz.command()
-@click.pass_context
+@click.pass_obj
 @click.argument('src', type=click.Path(exists=True))
 @click.argument('dest', required=False, default='')
 @click.option('--watch', '-w', is_flag=True, default=False,
               help='Use entr to wait for changes and automatically sync.')
-def sync(ctx, src, dest, watch):
+def sync(config, src, dest, watch):
     """Synchronize files with an instance.
     """
-    ec2 = ctx.obj['EC2']
-
     # Get a connectable host.
-    inst = get_running_instance(ec2, ctx.obj['AMI_IDS'])
+    inst = get_running_instance(config)
     host = inst['PublicDnsName']
     host_wait(host, SSH_PORT)
 
     # Concoct the rsync command.
     rsync_cmd = [
         'rsync', '--checksum', '--itemize-changes', '--recursive',
-        '-e', 'ssh -i {}'.format(shlex.quote(_ssh_key())),
+        '-e', 'ssh -i {}'.format(shlex.quote(config.ssh_key)),
         src, '{}:{}'.format(_ssh_host(host), dest),
     ]
 
