@@ -358,7 +358,9 @@ def stop(ctx, wait, terminate):
 @click.pass_context
 @click.argument('src', type=click.Path(exists=True))
 @click.argument('dest', required=False, default='')
-def sync(ctx, src, dest):
+@click.option('--watch', '-w', is_flag=True, default=False,
+              help='Use entr to wait for changes and automatically sync.')
+def sync(ctx, src, dest, watch):
     """Synchronize files with an instance.
     """
     ec2 = ctx.obj['EC2']
@@ -375,9 +377,21 @@ def sync(ctx, src, dest):
         src, '{}:{}'.format(_ssh_host(host), dest),
     ]
 
-    # Run the command.
-    log.info(fmt_cmd(rsync_cmd))
-    subprocess.run(rsync_cmd)
+    if watch:
+        # Use entr(1) to watch for changes.
+        find_cmd = ['find', src]
+        entr_cmd = ['entr'] + rsync_cmd
+        log.info('{} | {}'.format(fmt_cmd(find_cmd), fmt_cmd(entr_cmd)))
+
+        find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
+        entr_proc = subprocess.Popen(entr_cmd, stdin=find_proc.stdout)
+        find_proc.stdout.close()
+        entr_proc.wait()
+
+    else:
+        # Just rsync once.
+        log.info(fmt_cmd(rsync_cmd))
+        subprocess.run(rsync_cmd)
 
 
 if __name__ == '__main__':
