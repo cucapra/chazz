@@ -29,7 +29,6 @@ HB_AMI_IDS = [
 # Some AWS parameters.
 AWS_REGION = 'us-west-2'  # The Oregon region.
 EC2_TYPE = 'f1.2xlarge'  # Launch the smallest kind of F1 instance.
-SECURITY_GROUP = 'chazz'  # The name of a security group that allows SSH.
 
 # The path to the private key file to use for SSH. We use the
 # environment variable if it's set and this filename otherwise.
@@ -55,6 +54,7 @@ Config = namedtuple("Config", [
     'ami_ids',  # List of AMIs to look for (and start).
     'ssh_key',  # Path to the SSH private key file.
     'key_name',  # The EC2 keypair name.
+    'security_group',  # AWS security group (which must allow SSH).
 ])
 
 
@@ -159,7 +159,7 @@ def create_instance(config):
         MinCount=1,
         MaxCount=1,
         KeyName=config.key_name,
-        SecurityGroups=[SECURITY_GROUP],
+        SecurityGroups=[config.security_group],
     )
     assert len(res['Instances']) == 1
     return res['Instances'][0]
@@ -245,16 +245,19 @@ def _fmt_inst(inst):
               help='An AMI ID for HammerBlade images.')
 @click.option('-i', '--image', multiple=True, type=int,
               help='An image index to use (exclusively).')
-@click.option('-k', '--key-pair', metavar='NAME', default='ironcheese',
+@click.option('--key-pair', metavar='NAME', default='ironcheese',
               help='Name of the AWS key pair to add to new instances.')
+@click.option('--security-group', metavar='NAME', default='chazz',
+              help='An AWS security group that allows SSH.')
 @click_log.simple_verbosity_option(log)
-def chazz(ctx, ami, image, key_pair):
+def chazz(ctx, ami, image, key_pair, security_group):
     """Run HammerBlade on F1."""
     ctx.obj = Config(
         ec2=boto3.client('ec2', region_name=AWS_REGION),
         ami_ids=[HB_AMI_IDS[i] for i in image] if image else ami,
         ssh_key=os.environ.get(KEY_ENVVAR, KEY_FILE),
         key_name=key_pair,
+        security_group=security_group,
     )
 
 

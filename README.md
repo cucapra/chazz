@@ -82,6 +82,7 @@ There are a few global configuration options:
 * `--ami`: Pick a specific AMI ID to connect to or launch.
 * `-i`: A shorthand to pick an AMI from our built-in list. Use `-iN` to choose the `N`th image---for example, `chazz -i1 list` will show instances using the second image in our built-in list.
 * `--key-pair`: Specify the name of the AWS key pair to attach to any new instances we create.
+* `--security-group`: The AWS security group to associate with new instances. You'll want to (manually) create a security group that allows SSH connections.
 
 [rsync]: https://www.samba.org/rsync/
 [entr]: http://entrproject.org
