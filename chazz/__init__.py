@@ -249,9 +249,13 @@ def _fmt_inst(inst):
               help='Name of the AWS key pair to add to new instances.')
 @click.option('--security-group', metavar='NAME', default='chazz',
               help='An AWS security group that allows SSH.')
-@click_log.simple_verbosity_option(log)
-def chazz(ctx, ami, image, key_pair, security_group):
+@click.option('-v', '--verbose', is_flag=True, default=False,
+              help='Include debug output.')
+def chazz(ctx, verbose, ami, image, key_pair, security_group):
     """Run HammerBlade on F1."""
+    if verbose:
+        log.setLevel(logging.DEBUG)
+
     ctx.obj = Config(
         ec2=boto3.client('ec2', region_name=AWS_REGION),
         ami_ids=[HB_AMI_IDS[i] for i in image] if image else ami,
