@@ -354,5 +354,45 @@ def stop(ctx, wait, terminate):
                     instance_wait(ec2, iid, 'instance_stopped')
 
 
+@chazz.command()
+@click.pass_context
+@click.argument('src', type=click.Path(exists=True))
+@click.argument('dest', required=False, default='')
+@click.option('--watch', '-w', is_flag=True, default=False,
+              help='Use entr to wait for changes and automatically sync.')
+def sync(ctx, src, dest, watch):
+    """Synchronize files with an instance.
+    """
+    ec2 = ctx.obj['EC2']
+
+    # Get a connectable host.
+    inst = get_running_instance(ec2, ctx.obj['AMI_IDS'])
+    host = inst['PublicDnsName']
+    host_wait(host, SSH_PORT)
+
+    # Concoct the rsync command.
+    rsync_cmd = [
+        'rsync', '--checksum', '--itemize-changes', '--recursive',
+        '-e', 'ssh -i {}'.format(shlex.quote(_ssh_key())),
+        src, '{}:{}'.format(_ssh_host(host), dest),
+    ]
+
+    if watch:
+        # Use entr(1) to watch for changes.
+        find_cmd = ['find', src]
+        entr_cmd = ['entr'] + rsync_cmd
+        log.info('{} | {}'.format(fmt_cmd(find_cmd), fmt_cmd(entr_cmd)))
+
+        find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
+        entr_proc = subprocess.Popen(entr_cmd, stdin=find_proc.stdout)
+        find_proc.stdout.close()
+        entr_proc.wait()
+
+    else:
+        # Just rsync once.
+        log.info(fmt_cmd(rsync_cmd))
+        subprocess.run(rsync_cmd)
+
+
 if __name__ == '__main__':
     chazz()

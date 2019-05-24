@@ -65,5 +65,12 @@ You get an interactive shell with the appropriate key pre-loaded in an SSH agent
 So you can type `ssh $HB` to connect or `scp -r example $HB:` to upload files.
 Or to run a specific command, pass it as an argument, as in `chazz shell 'scp something.c $HB:'`.
 
+It can get a little annoying to edit files on the VM, so Chazz can help synchronize files you edit locally.
+Type `chazz sync foo` to [rsync][] `foo` to the server.
+The `-w` flag uses [entr][] to watch for changes to files and automatically send them to the server.
+
 Use the `--ami` option to choose a specific AMI ID to connect to or launch.
 As a shorthand, you can also use `-iN` to choose the `N`th image---for example, `chazz -i1 list` will show instances using the second image in our built-in list.
+
+[rsync]: https://www.samba.org/rsync/
+[entr]: http://entrproject.org
