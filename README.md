@@ -51,6 +51,8 @@ Use
 
 Type `chazz` to see a list of available commands.
 
+### Start and Connect to Instances
+
 To boot up an instance and SSH into it, type `chazz ssh`.
 Before giving you a prompt, the tool runs a command to load the FPGA configuration.
 Use the instance like normal, then disconnect.
@@ -60,14 +62,20 @@ Or use `chazz stop --terminate` to permanently decommission the instance.
 You can see a list of available HammerBlade instances with `chazz list`.
 There is also a `chazz start` command, which is like `chazz ssh` in that it ensures that there's a running instance, but it does not *also* attempt to connect with SSH.
 
+### Transfer Files (Automatically)
+
+It can get a little annoying to edit files on the VM, so Chazz can help synchronize files you edit locally.
+Type `chazz sync foo` to [rsync][] `foo` to the server.
+The `-w` flag uses [entr][] to watch for changes to files and automatically send them to the server.
+
+### Get a Shell for Typing Arbitrary SSH Commands
+
 For more complex interactions with a HammerBlade server, use `chazz shell`.
 You get an interactive shell with the appropriate key pre-loaded in an SSH agent and the host in an environment variable called `$HB`.
 So you can type `ssh $HB` to connect or `scp -r example $HB:` to upload files.
 Or to run a specific command, pass it as an argument, as in `chazz shell 'scp something.c $HB:'`.
 
-It can get a little annoying to edit files on the VM, so Chazz can help synchronize files you edit locally.
-Type `chazz sync foo` to [rsync][] `foo` to the server.
-The `-w` flag uses [entr][] to watch for changes to files and automatically send them to the server.
+### Options
 
 Use the `--ami` option to choose a specific AMI ID to connect to or launch.
 As a shorthand, you can also use `-iN` to choose the `N`th image---for example, `chazz -i1 list` will show instances using the second image in our built-in list.
