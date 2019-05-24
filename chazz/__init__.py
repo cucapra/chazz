@@ -111,12 +111,12 @@ def get_instances(ec2):
             yield inst
 
 
-def get_hb_instances(ec2, ami_ids):
+def get_hb_instances(config):
     """Generate the current EC2 instances based on any of the
     HammerBlade AMIs.
     """
-    for inst in get_instances(ec2):
-        if inst['ImageId'] in ami_ids:
+    for inst in get_instances(config.ec2):
+        if inst['ImageId'] in config.ami_ids:
             yield inst
 
 
@@ -127,11 +127,11 @@ def get_instance(ec2, instance_id):
     return r['Reservations'][0]['Instances'][0]
 
 
-def get_hb_instance(ec2, ami_ids):
+def get_hb_instance(config):
     """Return *some* existing HammerBlade EC2 instance, if one exists.
     Otherwise, return None.
     """
-    for inst in get_hb_instances(ec2, ami_ids):
+    for inst in get_hb_instances(config):
         if inst['State']['Code'] in (State.TERMINATED, State.SHUTTING_DOWN):
             # Ignore terminated instances.
             continue
@@ -149,11 +149,11 @@ def instance_wait(ec2, instance_id, until='instance_running'):
     waiter.wait(InstanceIds=[instance_id])
 
 
-def create_instance(ec2, ami_ids):
+def create_instance(config):
     """Create (and start) a new HammerBlade EC2 instance.
     """
-    res = ec2.run_instances(
-        ImageId=ami_ids[0],
+    res = config.ec2.run_instances(
+        ImageId=config.ami_ids[0],
         InstanceType=EC2_TYPE,
         MinCount=1,
         MaxCount=1,
@@ -164,11 +164,11 @@ def create_instance(ec2, ami_ids):
     return res['Instances'][0]
 
 
-def get_running_instance(ec2, ami_ids):
+def get_running_instance(config):
     """Get a *running* HammerBlade EC2 instance, starting a new one or
     booting up an old one if necessary.
     """
-    inst = get_hb_instance(ec2, ami_ids)
+    inst = get_hb_instance(config)
 
     if inst:
         iid = inst['InstanceId']
@@ -179,13 +179,13 @@ def get_running_instance(ec2, ami_ids):
 
         elif inst['State']['Code'] == State.STOPPED:
             log.info('instance is stopped; starting')
-            ec2.start_instances(InstanceIds=[iid])
+            config.ec2.start_instances(InstanceIds=[iid])
 
             log.info('waiting for instance to start')
-            instance_wait(ec2, iid)
+            instance_wait(config.ec2, iid)
 
             # "Refresh" the instance so we have its hostname.
-            return get_instance(ec2, iid)
+            return get_instance(config.ec2, iid)
 
         else:
             raise NotImplementedError(
@@ -194,12 +194,12 @@ def get_running_instance(ec2, ami_ids):
 
     else:
         log.info('no existing instance; creating a new one')
-        inst = create_instance(ec2, ami_ids)
+        inst = create_instance(config)
 
         log.info('waiting for new instance to start')
-        instance_wait(ec2, inst['InstanceId'])
+        instance_wait(config.ec2, inst['InstanceId'])
 
-        return get_instance(ec2, inst['InstanceId'])
+        return get_instance(config.ec2, inst['InstanceId'])
 
 
 def _ssh_key():
@@ -277,7 +277,7 @@ def chazz(ctx, ami, image):
 def ssh(config):
     """Connect to a HammerBlade instance with SSH.
     """
-    inst = get_running_instance(config.ec2, config.ami_ids)
+    inst = get_running_instance(config)
     host = inst['PublicDnsName']
 
     # Wait for the host to start its SSH server.
@@ -298,7 +298,7 @@ def ssh(config):
 def shell(config, cmd):
     """Launch a shell for convenient SSH invocation.
     """
-    inst = get_running_instance(config.ec2, config.ami_ids)
+    inst = get_running_instance(config)
     host = inst['PublicDnsName']
 
     cmd = [
@@ -317,7 +317,7 @@ def shell(config, cmd):
 def start(config):
     """Ensure that a HammerBlade instance is running.
     """
-    inst = get_running_instance(config.ec2, config.ami_ids)
+    inst = get_running_instance(config)
     print(_fmt_inst(inst))
 
 
@@ -326,7 +326,7 @@ def start(config):
 def list(config):
     """Show the available HammerBlade instances.
     """
-    for inst in get_hb_instances(config.ec2, config.ami_ids):
+    for inst in get_hb_instances(config):
         print(_fmt_inst(inst))
 
 
@@ -339,7 +339,7 @@ def list(config):
 def stop(config, wait, terminate):
     """Stop all running HammerBlade instances.
     """
-    for inst in get_hb_instances(config.ec2, config.ami_ids):
+    for inst in get_hb_instances(config):
         iid = inst['InstanceId']
         if terminate:
             if inst['State']['Code'] != State.TERMINATED:
@@ -365,7 +365,7 @@ def sync(config, src, dest, watch):
     """Synchronize files with an instance.
     """
     # Get a connectable host.
-    inst = get_running_instance(config.ec2, config.ami_ids)
+    inst = get_running_instance(config)
     host = inst['PublicDnsName']
     host_wait(host, SSH_PORT)
 
