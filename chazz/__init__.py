@@ -354,5 +354,31 @@ def stop(ctx, wait, terminate):
                     instance_wait(ec2, iid, 'instance_stopped')
 
 
+@chazz.command()
+@click.pass_context
+@click.argument('src', type=click.Path(exists=True))
+@click.argument('dest', required=False, default='')
+def sync(ctx, src, dest):
+    """Synchronize files with an instance.
+    """
+    ec2 = ctx.obj['EC2']
+
+    # Get a connectable host.
+    inst = get_running_instance(ec2, ctx.obj['AMI_IDS'])
+    host = inst['PublicDnsName']
+    host_wait(host, SSH_PORT)
+
+    # Concoct the rsync command.
+    rsync_cmd = [
+        'rsync', '--checksum', '--itemize-changes', '--recursive',
+        '-e', 'ssh -i {}'.format(shlex.quote(_ssh_key())),
+        src, '{}:{}'.format(_ssh_host(host), dest),
+    ]
+
+    # Run the command.
+    log.info(fmt_cmd(rsync_cmd))
+    subprocess.run(rsync_cmd)
+
+
 if __name__ == '__main__':
     chazz()
