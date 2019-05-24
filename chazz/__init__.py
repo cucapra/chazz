@@ -54,6 +54,7 @@ click_log.basic_config(log)
 Config = namedtuple("Config", [
     'ec2',  # Boto EC2 client object.
     'ami_ids',  # List of AMIs to look for (and start).
+    'ssh_key',  # Path to the SSH private key file.
 ])
 
 
@@ -202,39 +203,22 @@ def get_running_instance(config):
         return get_instance(config.ec2, inst['InstanceId'])
 
 
-def _ssh_key():
-    """Get the path to the SSH key file."""
-    return os.environ.get(KEY_ENVVAR, KEY_FILE)
-
-
 def _ssh_host(host):
     """Get the full user/host pair for use in SSH commands."""
     return '{}@{}'.format(USER, host)
 
 
-def ssh_command(host):
+def ssh_command(config, host):
     """Construct a command for SSHing into an EC2 instance.
     """
     return [
         'ssh',
-        '-i', _ssh_key(),
+        '-i', config.ssh_key,
         _ssh_host(host),
     ]
 
 
-def scp_command(src, host, dest):
-    """Construct an scp command for copying a local file to a remote
-    host.
-    """
-    return [
-        'scp',
-        '-i', _ssh_key(),
-        src,
-        '{}:{}'.format(_ssh_host(host), dest),
-    ]
-
-
-def run_setup(host):
+def run_setup(config, host):
     """Set up the host by copying our setup script and running it.
     """
     log.info('running setup script')
@@ -244,7 +228,7 @@ def run_setup(host):
         setup_script = f.read()
 
     # Pipe the command into sh on the host.
-    sh_cmd = ssh_command(host) + ['sh']
+    sh_cmd = ssh_command(config, host) + ['sh']
     log.debug(fmt_cmd(sh_cmd))
     subprocess.run(sh_cmd, input=setup_script)
 
@@ -264,12 +248,11 @@ def _fmt_inst(inst):
 @click_log.simple_verbosity_option(log)
 def chazz(ctx, ami, image):
     """Run HammerBlade on F1."""
-    ec2 = boto3.client('ec2', region_name=AWS_REGION)
-    if image:
-        ami_ids = [HB_AMI_IDS[i] for i in image]
-    else:
-        ami_ids = ami
-    ctx.obj = Config(ec2, ami_ids)
+    ctx.obj = Config(
+        ec2=boto3.client('ec2', region_name=AWS_REGION),
+        ami_ids=[HB_AMI_IDS[i] for i in image] if image else ami,
+        ssh_key=os.environ.get(KEY_ENVVAR, KEY_FILE),
+    )
 
 
 @chazz.command()
@@ -284,10 +267,10 @@ def ssh(config):
     host_wait(host, SSH_PORT)
 
     # Set up the VM.
-    run_setup(host)
+    run_setup(config, host)
 
     # Run the interactive SSH command.
-    cmd = ssh_command(host)
+    cmd = ssh_command(config, host)
     log.info(fmt_cmd(cmd))
     subprocess.run(cmd)
 
@@ -308,7 +291,7 @@ def shell(config, cmd):
     subprocess.run(cmd, env={
         'HB': _ssh_host(host),
         'HB_HOST': host,
-        'HB_KEY': os.path.abspath(_ssh_key()),
+        'HB_KEY': os.path.abspath(config.ssh_key),
     })
 
 
@@ -372,7 +355,7 @@ def sync(config, src, dest, watch):
     # Concoct the rsync command.
     rsync_cmd = [
         'rsync', '--checksum', '--itemize-changes', '--recursive',
-        '-e', 'ssh -i {}'.format(shlex.quote(_ssh_key())),
+        '-e', 'ssh -i {}'.format(shlex.quote(config.ssh_key)),
         src, '{}:{}'.format(_ssh_host(host), dest),
     ]
 
