@@ -11,6 +11,7 @@ import time
 import os
 import logging
 import click_log
+from collections import namedtuple
 
 __version__ = '1.0.0'
 
@@ -47,6 +48,13 @@ SETUP_SCRIPT = os.path.join(os.path.dirname(__file__), 'setup.sh')
 # Logger.
 log = logging.getLogger(__name__)
 click_log.basic_config(log)
+
+
+# Configuration object.
+Config = namedtuple("Config", [
+    'ec2',  # Boto EC2 client object.
+    'ami_ids',  # List of AMIs to look for (and start).
+])
 
 
 class State(enum.IntEnum):
@@ -256,22 +264,20 @@ def _fmt_inst(inst):
 @click_log.simple_verbosity_option(log)
 def chazz(ctx, ami, image):
     """Run HammerBlade on F1."""
-    ctx.ensure_object(dict)
-    ctx.obj['EC2'] = boto3.client('ec2', region_name=AWS_REGION)
+    ec2 = boto3.client('ec2', region_name=AWS_REGION)
     if image:
-        ctx.obj['AMI_IDS'] = [HB_AMI_IDS[i] for i in image]
+        ami_ids = [HB_AMI_IDS[i] for i in image]
     else:
-        ctx.obj['AMI_IDS'] = ami
+        ami_ids = ami
+    ctx.obj = Config(ec2, ami_ids)
 
 
 @chazz.command()
-@click.pass_context
-def ssh(ctx):
+@click.pass_obj
+def ssh(config):
     """Connect to a HammerBlade instance with SSH.
     """
-    ec2 = ctx.obj['EC2']
-
-    inst = get_running_instance(ec2, ctx.obj['AMI_IDS'])
+    inst = get_running_instance(config.ec2, config.ami_ids)
     host = inst['PublicDnsName']
 
     # Wait for the host to start its SSH server.
@@ -287,14 +293,12 @@ def ssh(ctx):
 
 
 @chazz.command()
-@click.pass_context
+@click.pass_obj
 @click.argument('cmd', required=False, default='exec "$SHELL"')
-def shell(ctx, cmd):
+def shell(config, cmd):
     """Launch a shell for convenient SSH invocation.
     """
-    ec2 = ctx.obj['EC2']
-
-    inst = get_running_instance(ec2, ctx.obj['AMI_IDS'])
+    inst = get_running_instance(config.ec2, config.ami_ids)
     host = inst['PublicDnsName']
 
     cmd = [
@@ -309,64 +313,59 @@ def shell(ctx, cmd):
 
 
 @chazz.command()
-@click.pass_context
-def start(ctx):
+@click.pass_obj
+def start(config):
     """Ensure that a HammerBlade instance is running.
     """
-    ec2 = ctx.obj['EC2']
-    inst = get_running_instance(ec2, ctx.obj['AMI_IDS'])
+    inst = get_running_instance(config.ec2, config.ami_ids)
     print(_fmt_inst(inst))
 
 
 @chazz.command()
-@click.pass_context
-def list(ctx):
+@click.pass_obj
+def list(config):
     """Show the available HammerBlade instances.
     """
-    ec2 = ctx.obj['EC2']
-    for inst in get_hb_instances(ec2, ctx.obj['AMI_IDS']):
+    for inst in get_hb_instances(config.ec2, config.ami_ids):
         print(_fmt_inst(inst))
 
 
 @chazz.command()
-@click.pass_context
+@click.pass_obj
 @click.option('--wait/--no-wait', default=False,
               help='Wait for the instances to stop.')
 @click.option('--terminate/--stop', default=False,
               help='Destroy the instance, or just stop it (the default).')
-def stop(ctx, wait, terminate):
+def stop(config, wait, terminate):
     """Stop all running HammerBlade instances.
     """
-    ec2 = ctx.obj['EC2']
-    for inst in get_hb_instances(ec2, ctx.obj['AMI_IDS']):
+    for inst in get_hb_instances(config.ec2, config.ami_ids):
         iid = inst['InstanceId']
         if terminate:
             if inst['State']['Code'] != State.TERMINATED:
                 log.info('terminating {}'.format(iid))
-                ec2.terminate_instances(InstanceIds=[iid])
+                config.ec2.terminate_instances(InstanceIds=[iid])
                 if wait:
-                    instance_wait(ec2, iid, 'instance_terminated')
+                    instance_wait(config.ec2, iid, 'instance_terminated')
         else:
             if inst['State']['Code'] == State.RUNNING:
                 log.info('stopping {}'.format(iid))
-                ec2.stop_instances(InstanceIds=[iid])
+                config.ec2.stop_instances(InstanceIds=[iid])
                 if wait:
-                    instance_wait(ec2, iid, 'instance_stopped')
+                    instance_wait(config.ec2, iid, 'instance_stopped')
 
 
 @chazz.command()
-@click.pass_context
+@click.pass_obj
 @click.argument('src', type=click.Path(exists=True))
 @click.argument('dest', required=False, default='')
 @click.option('--watch', '-w', is_flag=True, default=False,
               help='Use entr to wait for changes and automatically sync.')
-def sync(ctx, src, dest, watch):
+def sync(config, src, dest, watch):
     """Synchronize files with an instance.
     """
-    ec2 = ctx.obj['EC2']
-
     # Get a connectable host.
-    inst = get_running_instance(ec2, ctx.obj['AMI_IDS'])
+    inst = get_running_instance(config.ec2, config.ami_ids)
     host = inst['PublicDnsName']
     host_wait(host, SSH_PORT)
 
