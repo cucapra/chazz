@@ -255,6 +255,8 @@ def chazz(ctx, verbose, ami, image, key_pair, security_group):
     """Run HammerBlade on F1."""
     if verbose:
         log.setLevel(logging.DEBUG)
+    else:
+        log.setLevel(logging.INFO)
 
     ctx.obj = Config(
         ec2=boto3.client('ec2', region_name=AWS_REGION),
