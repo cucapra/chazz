@@ -29,10 +29,6 @@ AMI_IDS = {
     '20190319': 'ami-0c7ccefee8f931530',
 }
 
-# Some AWS parameters.
-AWS_REGION = 'us-west-2'  # The Oregon region.
-EC2_TYPE = 'f1.2xlarge'  # Launch the smallest kind of F1 instance.
-
 # User and port for SSH.
 USER = 'centos'
 SSH_PORT = 22
@@ -49,6 +45,8 @@ CONFIG_DEFAULT = {
     'ssh_key': 'ironcheese.pem',  # Path to corresponding SSH private key.
     'security_group': 'chazz',  # A security group that allows SSH.
     'default_ami': 'v0.4.2',  # The AMI name to connect to and create.
+    'aws_region': 'us-west-2',  # The Oregon region.
+    'ec2_type': 'f1.2xlarge',  # Launch the smallest kind of F1 instance.
 }
 
 
@@ -65,6 +63,7 @@ Config = namedtuple("Config", [
     'ssh_key',  # Path to the SSH private key file.
     'key_name',  # The EC2 keypair name.
     'security_group',  # AWS security group (which must allow SSH).
+    'ec2_type',  # EC2 instance type to create.
 ])
 
 
@@ -168,7 +167,7 @@ def create_instance(config):
     """
     res = config.ec2.run_instances(
         ImageId=config.ami_ids[config.ami_default],
-        InstanceType=EC2_TYPE,
+        InstanceType=config.ec2_type,
         MinCount=1,
         MaxCount=1,
         KeyName=config.key_name,
@@ -296,12 +295,13 @@ def chazz(ctx, verbose, ami, image):
         ctx.fail('image must be one of {}'.format(', '.join(ami_ids)))
 
     ctx.obj = Config(
-        ec2=boto3.client('ec2', region_name=AWS_REGION),
+        ec2=boto3.client('ec2', region_name=config_opts['aws_region']),
         ami_ids=ami_ids,
         ami_default=image,
         ssh_key=os.path.expanduser(config_opts['ssh_key']),
         key_name=config_opts['key_name'],
         security_group=config_opts['security_group'],
+        ec2_type=config_opts['ec2_type'],
     )
     log.debug('%s', ctx.obj)
 
