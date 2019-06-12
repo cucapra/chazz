@@ -18,6 +18,9 @@ __version__ = '1.0.0'
 
 # HammerBlade AMIs we have available. Map version names to AMI IDs.
 AMI_IDS = {
+    'v1.0.0':   'ami-0c6849749f4551621',
+    'v0.5.2':   'ami-0efe7628e32d547ae',
+    'v0.5.1':   'ami-0ed2d075e7a3482ca',
     'v0.4.2':   'ami-0ebfadb08765d6ddf',
     '20190511': 'ami-0e1d91c72cabb5b3f',
     '20190510': 'ami-0343798c9b9136e4e',
