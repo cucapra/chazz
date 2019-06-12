@@ -48,7 +48,7 @@ CONFIG_DEFAULT = {
     'key_name': 'ironcheese',  # Name of the key pair to add to new instances.
     'ssh_key': 'ironcheese.pem',  # Path to corresponding SSH private key.
     'security_group': 'chazz',  # A security group that allows SSH.
-    'default_ami': 'v0.4.2',
+    'default_ami': 'v0.4.2',  # The AMI name to connect to and create.
 }
 
 
@@ -272,7 +272,7 @@ def load_config():
 @click.option('--ami', default=None,
               help='An AMI ID for HammerBlade images.')
 @click.option('-i', '--image', default=None,
-              help='Version name for the image to use for new instances.')
+              help='Version name for the image for connection & creation.')
 @click.option('-v', '--verbose', is_flag=True, default=False,
               help='Include debug output.')
 def chazz(ctx, verbose, ami, image):
