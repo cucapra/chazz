@@ -234,10 +234,14 @@ def run_setup(config, host):
     subprocess.run(sh_cmd, input=setup_script)
 
 
-def _fmt_inst(inst):
+def fmt_inst(config, inst):
     """Format an EC2 instance object as a string for display.
     """
-    return '{0[InstanceId]} ({0[State][Name]}): {0[ImageId]}'.format(inst)
+    ami_names = {v: k for (k, v) in config.ami_ids.items()}
+    return '{0[InstanceId]} ({0[State][Name]}): {1}'.format(
+        inst,
+        ami_names.get(inst['ImageId'], inst['ImageId']),
+    )
 
 
 @click.group()
@@ -323,7 +327,7 @@ def start(config):
     """Ensure that a HammerBlade instance is running.
     """
     inst = get_running_instance(config)
-    print(_fmt_inst(inst))
+    print(fmt_inst(config, inst))
 
 
 @chazz.command()
@@ -332,7 +336,7 @@ def list(config):
     """Show the available HammerBlade instances.
     """
     for inst in get_hb_instances(config):
-        print(_fmt_inst(inst))
+        print(fmt_inst(config, inst))
 
 
 @chazz.command()
