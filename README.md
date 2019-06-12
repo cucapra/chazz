@@ -80,7 +80,7 @@ Or to run a specific command, pass it as an argument, as in `chazz shell 'scp so
 There are a few global configuration options:
 
 * `--ami`: Pick a specific AMI ID to connect to or launch.
-* `-i`: A shorthand to pick an AMI from our built-in list. Use `-iN` to choose the `N`th image---for example, `chazz -i1 list` will show instances using the second image in our built-in list.
+* `-i`: A shorthand to pick an AMI from our built-in list. Use the version name string. For example, `-i v0.4.2` will start and connect to instances using that version of the image.
 * `--key-pair`: Specify the name of the AWS key pair to attach to any new instances we create.
 * `--security-group`: The AWS security group to associate with new instances. You'll want to (manually) create a security group that allows SSH connections.
 

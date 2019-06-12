@@ -15,16 +15,16 @@ from collections import namedtuple
 
 __version__ = '1.0.0'
 
-# HammerBlade AMI IDs we have available. Put the "best" image first:
-# this is the one we'll use to start new instances.
-HB_AMI_IDS = [
-    'ami-0ebfadb08765d6ddf',  # v0.4.2
-    'ami-0e1d91c72cabb5b3f',  # 20190511
-    'ami-0343798c9b9136e4e',  # 20190510
-    'ami-0270f06e16bfee050',  # 20190417
-    'ami-0ce51e94bbeba2650',  # 20190405
-    'ami-0c7ccefee8f931530',  # 20190319
-]
+# HammerBlade AMIs we have available. Map version names to AMI IDs.
+HB_AMI_IDS = {
+    'v0.4.2':   'ami-0ebfadb08765d6ddf',
+    '20190511': 'ami-0e1d91c72cabb5b3f',
+    '20190510': 'ami-0343798c9b9136e4e',
+    '20190417': 'ami-0270f06e16bfee050',
+    '20190405': 'ami-0ce51e94bbeba2650',
+    '20190319': 'ami-0c7ccefee8f931530',
+}
+HB_AMI_DEFAULT = 'v0.4.2'
 
 # Some AWS parameters.
 AWS_REGION = 'us-west-2'  # The Oregon region.
@@ -51,7 +51,8 @@ click_log.basic_config(log)
 # Configuration object.
 Config = namedtuple("Config", [
     'ec2',  # Boto EC2 client object.
-    'ami_ids',  # List of AMIs to look for (and start).
+    'ami_ids',  # Mapping from version names to AMI IDs.
+    'ami_default',  # Name of the default version to use.
     'ssh_key',  # Path to the SSH private key file.
     'key_name',  # The EC2 keypair name.
     'security_group',  # AWS security group (which must allow SSH).
@@ -117,7 +118,7 @@ def get_hb_instances(config):
     HammerBlade AMIs.
     """
     for inst in get_instances(config.ec2):
-        if inst['ImageId'] in config.ami_ids:
+        if inst['ImageId'] in config.ami_ids.values():
             yield inst
 
 
@@ -154,7 +155,7 @@ def create_instance(config):
     """Create (and start) a new HammerBlade EC2 instance.
     """
     res = config.ec2.run_instances(
-        ImageId=config.ami_ids[0],
+        ImageId=config.ami_ids[config.default_ami],
         InstanceType=EC2_TYPE,
         MinCount=1,
         MaxCount=1,
@@ -241,10 +242,10 @@ def _fmt_inst(inst):
 
 @click.group()
 @click.pass_context
-@click.option('--ami', multiple=True, default=HB_AMI_IDS,
+@click.option('--ami', default=None,
               help='An AMI ID for HammerBlade images.')
-@click.option('-i', '--image', multiple=True, type=int,
-              help='An image index to use (exclusively).')
+@click.option('-i', '--image', default=HB_AMI_DEFAULT,
+              help='Version name for the image to use for new instances.')
 @click.option('--key-pair', metavar='NAME', default='ironcheese',
               help='Name of the AWS key pair to add to new instances.')
 @click.option('--security-group', metavar='NAME', default='chazz',
@@ -258,9 +259,17 @@ def chazz(ctx, verbose, ami, image, key_pair, security_group):
     else:
         log.setLevel(logging.INFO)
 
+    ami_ids = dict(HB_AMI_IDS)
+    if ami:
+        ami_ids['cli'] = ami
+        image = 'cli'
+    elif image not in ami_ids:
+        ctx.fail('image must be one of {}'.format(', '.join(ami_ids)))
+
     ctx.obj = Config(
         ec2=boto3.client('ec2', region_name=AWS_REGION),
-        ami_ids=[HB_AMI_IDS[i] for i in image] if image else ami,
+        ami_ids=ami_ids,
+        ami_default=image,
         ssh_key=os.environ.get(KEY_ENVVAR, KEY_FILE),
         key_name=key_pair,
         security_group=security_group,
