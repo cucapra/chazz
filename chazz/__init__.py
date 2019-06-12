@@ -130,10 +130,13 @@ def get_instance(ec2, instance_id):
 
 
 def get_hb_instance(config):
-    """Return *some* existing HammerBlade EC2 instance, if one exists.
-    Otherwise, return None.
+    """Return *some* existing HammerBlade EC2 instance for the *default*
+    image, if one exists. Otherwise, return None.
     """
     for inst in get_hb_instances(config):
+        if inst['ImageId'] != config.ami_ids[config.ami_default]:
+            # Only consider the default image.
+            continue
         if inst['State']['Code'] in (State.TERMINATED, State.SHUTTING_DOWN):
             # Ignore terminated instances.
             continue
@@ -155,7 +158,7 @@ def create_instance(config):
     """Create (and start) a new HammerBlade EC2 instance.
     """
     res = config.ec2.run_instances(
-        ImageId=config.ami_ids[config.default_ami],
+        ImageId=config.ami_ids[config.ami_default],
         InstanceType=EC2_TYPE,
         MinCount=1,
         MaxCount=1,
