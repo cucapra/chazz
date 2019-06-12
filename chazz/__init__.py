@@ -17,7 +17,7 @@ import tomlkit
 __version__ = '1.0.0'
 
 # HammerBlade AMIs we have available. Map version names to AMI IDs.
-HB_AMI_IDS = {
+AMI_IDS = {
     'v0.4.2':   'ami-0ebfadb08765d6ddf',
     '20190511': 'ami-0e1d91c72cabb5b3f',
     '20190510': 'ami-0343798c9b9136e4e',
@@ -110,7 +110,7 @@ def host_wait(host, port, interval=10):
         time.sleep(interval)
 
 
-def get_instances(ec2):
+def all_instances(ec2):
     """Generate all the currently available EC2 instances.
     """
     r = ec2.describe_instances()
@@ -119,11 +119,11 @@ def get_instances(ec2):
             yield inst
 
 
-def get_hb_instances(config):
+def get_instances(config):
     """Generate the current EC2 instances based on any of the
     HammerBlade AMIs.
     """
-    for inst in get_instances(config.ec2):
+    for inst in all_instances(config.ec2):
         if inst['ImageId'] in config.ami_ids.values():
             yield inst
 
@@ -135,11 +135,11 @@ def get_instance(ec2, instance_id):
     return r['Reservations'][0]['Instances'][0]
 
 
-def get_hb_instance(config):
+def get_default_instance(config):
     """Return *some* existing HammerBlade EC2 instance for the *default*
     image, if one exists. Otherwise, return None.
     """
-    for inst in get_hb_instances(config):
+    for inst in get_instances(config):
         if inst['ImageId'] != config.ami_ids[config.ami_default]:
             # Only consider the default image.
             continue
@@ -179,7 +179,7 @@ def get_running_instance(config):
     """Get a *running* HammerBlade EC2 instance, starting a new one or
     booting up an old one if necessary.
     """
-    inst = get_hb_instance(config)
+    inst = get_default_instance(config)
 
     if inst:
         iid = inst['InstanceId']
@@ -285,7 +285,7 @@ def chazz(ctx, verbose, ami, image):
 
     # Options to choose specific images.
     image = image or config_opts['default_ami']
-    ami_ids = dict(HB_AMI_IDS)
+    ami_ids = dict(AMI_IDS)
     if ami:
         ami_ids['cli'] = ami
         image = 'cli'
@@ -357,7 +357,7 @@ def start(config):
 def list(config):
     """Show the available HammerBlade instances.
     """
-    for inst in get_hb_instances(config):
+    for inst in get_instances(config):
         print(fmt_inst(config, inst))
 
 
@@ -370,7 +370,7 @@ def list(config):
 def stop(config, wait, terminate):
     """Stop all running HammerBlade instances.
     """
-    for inst in get_hb_instances(config):
+    for inst in get_instances(config):
         iid = inst['InstanceId']
         if terminate:
             if inst['State']['Code'] != State.TERMINATED:
