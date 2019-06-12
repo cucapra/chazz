@@ -33,14 +33,14 @@ You can type `aws configure` (if you have the AWS CLI) or manually create the fi
 On a shared account, you may need to create yourself an [IAM user][iam] with "programmatic access" to get an access key.
 You don't need to configure a default region; Chazz specifies the region itself.
 
-Next, obtain the private key and put it here.
+Next, obtain the private key.
 Make sure the permissions are right:
 
     $ chmod 0600 ironcheese.pem
 
-You can either use that name or set the `CHAZZ_KEY` environment variable to point to the key file:
+You can either use that name or create a configuration file at `~/.config/chazz.toml` to point to the key file:
 
-    $ export CHAZZ_KEY=`pwd`/ironcheese.pem
+    ssh_key = "~/chazz/ironcheese.pem"
 
 [config]: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration
 [iam]: https://console.aws.amazon.com/iam/home?#/users
@@ -75,14 +75,28 @@ You get an interactive shell with the appropriate key pre-loaded in an SSH agent
 So you can type `ssh $HB` to connect or `scp -r example $HB:` to upload files.
 Or to run a specific command, pass it as an argument, as in `chazz shell 'scp something.c $HB:'`.
 
+### Configuration
+
+The configuration file at `~/.config/chazz.toml` supports these options:
+
+- `ssh_key`: Path to the SSH private key file to use when connecting to instances.
+- `key_name`: The name of the key pair in AWS. Chazz will attach this to any new instances it creates. It should be the key pair corresponding to the `ssh_key` file above.
+- `security_group`: The AWS security group to associate with new instances. You'll want to (manually) create a security group that allows SSH connections.
+- `default_ami`: The name (i.e., version) of the AMI to connect to and to use for new instances. This is like the `-i` command-line flag (below).
+
+The defaults look something like this:
+
+    ssh_key = "ironcheese.pem"
+    key_name = "ironcheese"
+    security_group = "chazz"
+    default_ami = "v0.4.2"
+
 ### Options
 
-There are a few global configuration options:
+There are a few global command-line flags you can use:
 
 * `--ami`: Pick a specific AMI ID to connect to or launch.
 * `-i`: A shorthand to pick an AMI from our built-in list. Use the version name string. For example, `-i v0.4.2` will start and connect to instances using that version of the image.
-* `--key-pair`: Specify the name of the AWS key pair to attach to any new instances we create.
-* `--security-group`: The AWS security group to associate with new instances. You'll want to (manually) create a security group that allows SSH connections.
 
 [rsync]: https://www.samba.org/rsync/
 [entr]: http://entrproject.org

@@ -12,6 +12,7 @@ import os
 import logging
 import click_log
 from collections import namedtuple
+import tomlkit
 
 __version__ = '1.0.0'
 
@@ -24,16 +25,10 @@ HB_AMI_IDS = {
     '20190405': 'ami-0ce51e94bbeba2650',
     '20190319': 'ami-0c7ccefee8f931530',
 }
-HB_AMI_DEFAULT = 'v0.4.2'
 
 # Some AWS parameters.
 AWS_REGION = 'us-west-2'  # The Oregon region.
 EC2_TYPE = 'f1.2xlarge'  # Launch the smallest kind of F1 instance.
-
-# The path to the private key file to use for SSH. We use the
-# environment variable if it's set and this filename otherwise.
-KEY_ENVVAR = 'CHAZZ_KEY'
-KEY_FILE = 'ironcheese.pem'
 
 # User and port for SSH.
 USER = 'centos'
@@ -41,6 +36,17 @@ SSH_PORT = 22
 
 # The setup script to run on new images.
 SETUP_SCRIPT = os.path.join(os.path.dirname(__file__), 'setup.sh')
+
+# Path for configuration options that override the below.
+CONFIG_PATH = '~/.config/chazz.toml'
+
+# Default configuration options.
+CONFIG_DEFAULT = {
+    'key_name': 'ironcheese',  # Name of the key pair to add to new instances.
+    'ssh_key': 'ironcheese.pem',  # Path to corresponding SSH private key.
+    'security_group': 'chazz',  # A security group that allows SSH.
+    'default_ami': 'v0.4.2',
+}
 
 
 # Logger.
@@ -247,25 +253,38 @@ def fmt_inst(config, inst):
     )
 
 
+def load_config():
+    """Load the configuration object from the file.
+    """
+    config_path = os.path.expanduser(CONFIG_PATH)
+    if os.path.isfile(config_path):
+        with open(config_path) as f:
+            return tomlkit.loads(f.read())
+    else:
+        return {}
+
+
 @click.group()
 @click.pass_context
 @click.option('--ami', default=None,
               help='An AMI ID for HammerBlade images.')
-@click.option('-i', '--image', default=HB_AMI_DEFAULT,
+@click.option('-i', '--image', default=None,
               help='Version name for the image to use for new instances.')
-@click.option('--key-pair', metavar='NAME', default='ironcheese',
-              help='Name of the AWS key pair to add to new instances.')
-@click.option('--security-group', metavar='NAME', default='chazz',
-              help='An AWS security group that allows SSH.')
 @click.option('-v', '--verbose', is_flag=True, default=False,
               help='Include debug output.')
-def chazz(ctx, verbose, ami, image, key_pair, security_group):
+def chazz(ctx, verbose, ami, image):
     """Run HammerBlade on F1."""
     if verbose:
         log.setLevel(logging.DEBUG)
     else:
         log.setLevel(logging.INFO)
 
+    # Load the configuration from the file, overriding defaults.
+    config_opts = dict(CONFIG_DEFAULT)
+    config_opts.update(load_config())
+
+    # Options to choose specific images.
+    image = image or config_opts['default_ami']
     ami_ids = dict(HB_AMI_IDS)
     if ami:
         ami_ids['cli'] = ami
@@ -277,9 +296,9 @@ def chazz(ctx, verbose, ami, image, key_pair, security_group):
         ec2=boto3.client('ec2', region_name=AWS_REGION),
         ami_ids=ami_ids,
         ami_default=image,
-        ssh_key=os.environ.get(KEY_ENVVAR, KEY_FILE),
-        key_name=key_pair,
-        security_group=security_group,
+        ssh_key=os.path.expanduser(config_opts['ssh_key']),
+        key_name=config_opts['key_name'],
+        security_group=config_opts['security_group'],
     )
     log.debug('%s', ctx.obj)
 

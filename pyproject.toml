@@ -10,6 +10,7 @@ requires = [
     "click",
     "boto3",
     "click-log",
+    "tomlkit",
 ]
 
 [tool.flit.scripts]
