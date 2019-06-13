@@ -22,7 +22,7 @@ SSH_PORT = 22
 SETUP_SCRIPT = os.path.join(os.path.dirname(__file__), 'setup.sh')
 
 # Path for configuration options that override the below.
-CONFIG_PATH = '~/.config/chazz.toml'
+CONFIG_PATH = os.path.expanduser('~/.config/chazz.toml')
 
 # Default configuration options.
 CONFIG_DEFAULT = {
@@ -256,9 +256,8 @@ def fmt_inst(config, inst):
 def load_config():
     """Load the configuration object from the file.
     """
-    config_path = os.path.expanduser(CONFIG_PATH)
-    if os.path.isfile(config_path):
-        with open(config_path) as f:
+    if os.path.isfile(CONFIG_PATH):
+        with open(CONFIG_PATH) as f:
             return tomlkit.loads(f.read())
     else:
         return {}
