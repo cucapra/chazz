@@ -84,7 +84,7 @@ The configuration file at `~/.config/chazz.toml` supports these options:
 - `security_group`: The AWS security group to associate with new instances. You'll want to (manually) create a security group that allows SSH connections.
 - `default_ami`: The name (i.e., version) of the AMI to connect to and to use for new instances. This is like the `-i` command-line flag (below).
 
-There are also `aws_region` and `ec2_type` options that you probably shouldn't need to change.
+There are also some other options you probably don't need to change: `aws_region`, `ec2_type`, and `ami_ids`.
 
 The defaults look something like this:
 

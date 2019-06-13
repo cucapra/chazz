@@ -16,19 +16,6 @@ import tomlkit
 
 __version__ = '1.0.0'
 
-# HammerBlade AMIs we have available. Map version names to AMI IDs.
-AMI_IDS = {
-    'v1.0.0':   'ami-0c6849749f4551621',
-    'v0.5.2':   'ami-0efe7628e32d547ae',
-    'v0.5.1':   'ami-0ed2d075e7a3482ca',
-    'v0.4.2':   'ami-0ebfadb08765d6ddf',
-    '20190511': 'ami-0e1d91c72cabb5b3f',
-    '20190510': 'ami-0343798c9b9136e4e',
-    '20190417': 'ami-0270f06e16bfee050',
-    '20190405': 'ami-0ce51e94bbeba2650',
-    '20190319': 'ami-0c7ccefee8f931530',
-}
-
 # User and port for SSH.
 USER = 'centos'
 SSH_PORT = 22
@@ -47,6 +34,17 @@ CONFIG_DEFAULT = {
     'default_ami': 'v0.4.2',  # The AMI name to connect to and create.
     'aws_region': 'us-west-2',  # The Oregon region.
     'ec2_type': 'f1.2xlarge',  # Launch the smallest kind of F1 instance.
+    'ami_ids': {  # Mapping from version names to image IDs.
+        'v1.0.0':   'ami-0c6849749f4551621',
+        'v0.5.2':   'ami-0efe7628e32d547ae',
+        'v0.5.1':   'ami-0ed2d075e7a3482ca',
+        'v0.4.2':   'ami-0ebfadb08765d6ddf',
+        '20190511': 'ami-0e1d91c72cabb5b3f',
+        '20190510': 'ami-0343798c9b9136e4e',
+        '20190417': 'ami-0270f06e16bfee050',
+        '20190405': 'ami-0ce51e94bbeba2650',
+        '20190319': 'ami-0c7ccefee8f931530',
+    },
 }
 
 
@@ -287,7 +285,7 @@ def chazz(ctx, verbose, ami, image):
 
     # Options to choose specific images.
     image = image or config_opts['default_ami']
-    ami_ids = dict(AMI_IDS)
+    ami_ids = dict(config_opts['ami_ids'])
     if ami:
         ami_ids['cli'] = ami
         image = 'cli'
