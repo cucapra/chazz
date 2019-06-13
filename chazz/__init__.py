@@ -350,11 +350,15 @@ def list(config):
               help='Wait for the instances to stop.')
 @click.option('--terminate/--stop', default=False,
               help='Destroy the instance, or just stop it (the default).')
-def stop(config, wait, terminate):
-    """Stop all running instances.
+@click.argument('stop_id', required=False, metavar='[ID]')
+def stop(config, wait, terminate, stop_id):
+    """Stop all running instances, or one given by its ID.
     """
     for inst in get_instances(config):
         iid = inst['InstanceId']
+        if stop_id and iid != stop_id:
+            continue
+
         if terminate:
             if inst['State']['Code'] != State.TERMINATED:
                 log.info('terminating {}'.format(iid))
