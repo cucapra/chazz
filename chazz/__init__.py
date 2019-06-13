@@ -21,30 +21,9 @@ SSH_PORT = 22
 # The setup script to run on new images.
 SETUP_SCRIPT = os.path.join(os.path.dirname(__file__), 'setup.sh')
 
-# Path for configuration options that override the below.
+# Paths for the user configuration and the configuration defaults.
 CONFIG_PATH = os.path.expanduser('~/.config/chazz.toml')
-
-# Default configuration options.
-CONFIG_DEFAULT = {
-    'key_name': 'ironcheese',  # Name of the key pair to add to new instances.
-    'ssh_key': 'ironcheese.pem',  # Path to corresponding SSH private key.
-    'security_group': 'chazz',  # A security group that allows SSH.
-    'default_ami': 'v0.4.2',  # The AMI name to connect to and create.
-    'aws_region': 'us-west-2',  # The Oregon region.
-    'ec2_type': 'f1.2xlarge',  # Launch the smallest kind of F1 instance.
-    'user': 'centos',  # The user for SSH connections.
-    'ami_ids': {  # Mapping from version names to image IDs.
-        'v1.0.0':   'ami-0c6849749f4551621',
-        'v0.5.2':   'ami-0efe7628e32d547ae',
-        'v0.5.1':   'ami-0ed2d075e7a3482ca',
-        'v0.4.2':   'ami-0ebfadb08765d6ddf',
-        '20190511': 'ami-0e1d91c72cabb5b3f',
-        '20190510': 'ami-0343798c9b9136e4e',
-        '20190417': 'ami-0270f06e16bfee050',
-        '20190405': 'ami-0ce51e94bbeba2650',
-        '20190319': 'ami-0c7ccefee8f931530',
-    },
-}
+DEFAULT_PATH = os.path.join(os.path.dirname(__file__), 'config_default.toml')
 
 
 # Logger.
@@ -254,13 +233,17 @@ def fmt_inst(config, inst):
 
 
 def load_config():
-    """Load the configuration object from the file.
+    """Load the configuration object by merging the default options with
+    the user configuration file.
     """
+    with open(DEFAULT_PATH) as f:
+        config = tomlkit.loads(f.read())
+
     if os.path.isfile(CONFIG_PATH):
         with open(CONFIG_PATH) as f:
-            return tomlkit.loads(f.read())
-    else:
-        return {}
+            config.update(tomlkit.loads(f.read()))
+
+    return config
 
 
 @click.group()
@@ -279,8 +262,7 @@ def chazz(ctx, verbose, ami, image):
         log.setLevel(logging.INFO)
 
     # Load the configuration from the file, overriding defaults.
-    config_opts = dict(CONFIG_DEFAULT)
-    config_opts.update(load_config())
+    config_opts = load_config()
 
     # Options to choose specific images.
     image = image or config_opts['default_ami']

@@ -77,7 +77,7 @@ Or to run a specific command, pass it as an argument, as in `chazz shell 'scp so
 
 ### Configuration
 
-The configuration file at `~/.config/chazz.toml` supports these options:
+The [TOML][] configuration file at `~/.config/chazz.toml` supports these options:
 
 - `ssh_key`: Path to the SSH private key file to use when connecting to instances.
 - `key_name`: The name of the key pair in AWS. Chazz will attach this to any new instances it creates. It should be the key pair corresponding to the `ssh_key` file above.
@@ -85,13 +85,10 @@ The configuration file at `~/.config/chazz.toml` supports these options:
 - `default_ami`: The name (i.e., version) of the AMI to connect to and to use for new instances. This is like the `-i` command-line flag (below).
 
 There are also some other options you probably don't need to change: `aws_region`, `ec2_type`, `ami_ids`, and `user`.
+See [the default configuration][default] for an example of what a config file looks like.
 
-The defaults look something like this:
-
-    ssh_key = "ironcheese.pem"
-    key_name = "ironcheese"
-    security_group = "chazz"
-    default_ami = "v0.4.2"
+[toml]: https://github.com/toml-lang/toml
+[default]: https://github.com/cucapra/chazz/blob/master/chazz/config_default.toml
 
 ### Options
 
