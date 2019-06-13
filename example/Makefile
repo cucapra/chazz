@@ -46,9 +46,10 @@ include $(BSG_MANYCORE_DIR)/software/mk/Makefile.builddefs
 
 DEVICE_OBJS := $(DEVICE_SRCS:.c=.o)
 DEVICE_OBJS_ALL := $(DEVICE_OBJS) $(BSG_MANYCORE_LIB_OBJS)
+CRT_LIB := $(BSG_MANYCORE_DIR)/software/spmd/common/crt.o
 
-$(DEVICE_TARGET): $(DEVICE_OBJS_ALL)
-	$(RISCV_LINK) $(RISCV_LINK_OPTS) $^ -o $@
+$(DEVICE_TARGET): $(DEVICE_OBJS_ALL) $(CRT_LIB)
+	$(RISCV_LINK) $(RISCV_LINK_OPTS) $(DEVICE_OBJS_ALL) -o $@
 
 $(DEVICE_OBJS_ALL): %.o: %.c
 	$(RISCV_GCC) $(RISCV_GCC_OPTS) $(OPT_LEVEL) $(spmd_defs) -c $< -o $@
