@@ -16,8 +16,6 @@ import tomlkit
 
 __version__ = '1.0.0'
 
-# User and port for SSH.
-USER = 'centos'
 SSH_PORT = 22
 
 # The setup script to run on new images.
@@ -34,6 +32,7 @@ CONFIG_DEFAULT = {
     'default_ami': 'v0.4.2',  # The AMI name to connect to and create.
     'aws_region': 'us-west-2',  # The Oregon region.
     'ec2_type': 'f1.2xlarge',  # Launch the smallest kind of F1 instance.
+    'user': 'centos',  # The user for SSH connections.
     'ami_ids': {  # Mapping from version names to image IDs.
         'v1.0.0':   'ami-0c6849749f4551621',
         'v0.5.2':   'ami-0efe7628e32d547ae',
@@ -62,6 +61,7 @@ Config = namedtuple("Config", [
     'key_name',  # The EC2 keypair name.
     'security_group',  # AWS security group (which must allow SSH).
     'ec2_type',  # EC2 instance type to create.
+    'user',  # SSH username.
 ])
 
 
@@ -213,9 +213,9 @@ def get_running_instance(config):
         return get_instance(config.ec2, inst['InstanceId'])
 
 
-def _ssh_host(host):
+def ssh_host(config, host):
     """Get the full user/host pair for use in SSH commands."""
-    return '{}@{}'.format(USER, host)
+    return '{}@{}'.format(config.user, host)
 
 
 def ssh_command(config, host):
@@ -224,7 +224,7 @@ def ssh_command(config, host):
     return [
         'ssh',
         '-i', config.ssh_key,
-        _ssh_host(host),
+        ssh_host(config, host),
     ]
 
 
@@ -300,6 +300,7 @@ def chazz(ctx, verbose, ami, image):
         key_name=config_opts['key_name'],
         security_group=config_opts['security_group'],
         ec2_type=config_opts['ec2_type'],
+        user=config_opts['user'],
     )
     log.debug('%s', ctx.obj)
 
@@ -338,7 +339,7 @@ def shell(config, cmd):
         'ssh-add "$HB_KEY" ; {}'.format(cmd),
     ]
     subprocess.run(cmd, env={
-        'HB': _ssh_host(host),
+        'HB': ssh_host(config, host),
         'HB_HOST': host,
         'HB_KEY': os.path.abspath(config.ssh_key),
     })
@@ -405,7 +406,7 @@ def sync(config, src, dest, watch):
     rsync_cmd = [
         'rsync', '--checksum', '--itemize-changes', '--recursive',
         '-e', 'ssh -i {}'.format(shlex.quote(config.ssh_key)),
-        src, '{}:{}'.format(_ssh_host(host), dest),
+        src, '{}:{}'.format(ssh_host(config, host), dest),
     ]
 
     if watch:
