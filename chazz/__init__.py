@@ -100,7 +100,7 @@ def all_instances(ec2):
 
 def get_instances(config):
     """Generate the current EC2 instances based on any of the
-    HammerBlade AMIs.
+    configured AMIs.
     """
     for inst in all_instances(config.ec2):
         if inst['ImageId'] in config.ami_ids.values():
@@ -115,8 +115,8 @@ def get_instance(ec2, instance_id):
 
 
 def get_default_instance(config):
-    """Return *some* existing HammerBlade EC2 instance for the *default*
-    image, if one exists. Otherwise, return None.
+    """Return *some* existing EC2 instance for the *default* image, if
+    one exists. Otherwise, return None.
     """
     for inst in get_instances(config):
         if inst['ImageId'] != config.ami_ids[config.ami_default]:
@@ -140,7 +140,7 @@ def instance_wait(ec2, instance_id, until='instance_running'):
 
 
 def create_instance(config):
-    """Create (and start) a new HammerBlade EC2 instance.
+    """Create (and start) a new EC2 instance using the default AMI.
     """
     res = config.ec2.run_instances(
         ImageId=config.ami_ids[config.ami_default],
@@ -155,8 +155,8 @@ def create_instance(config):
 
 
 def get_running_instance(config):
-    """Get a *running* HammerBlade EC2 instance, starting a new one or
-    booting up an old one if necessary.
+    """Get a *running* EC2 instance with the default AMI, starting a new
+    one or booting up an old one if necessary.
     """
     inst = get_default_instance(config)
 
@@ -249,7 +249,7 @@ def load_config():
 @click.group()
 @click.pass_context
 @click.option('--ami', default=None,
-              help='An AMI ID for HammerBlade images.')
+              help='An AMI ID to use for finding and creating instances.')
 @click.option('-i', '--image', default=None,
               help='Version name for the image for connection & creation.')
 @click.option('-v', '--verbose', is_flag=True, default=False,
@@ -289,7 +289,7 @@ def chazz(ctx, verbose, ami, image):
 @chazz.command()
 @click.pass_obj
 def ssh(config):
-    """Connect to a HammerBlade instance with SSH.
+    """Connect to an instance with SSH.
     """
     inst = get_running_instance(config)
     host = inst['PublicDnsName']
@@ -329,7 +329,7 @@ def shell(config, cmd):
 @chazz.command()
 @click.pass_obj
 def start(config):
-    """Ensure that a HammerBlade instance is running.
+    """Ensure that an instance is running.
     """
     inst = get_running_instance(config)
     print(fmt_inst(config, inst))
@@ -338,7 +338,7 @@ def start(config):
 @chazz.command()
 @click.pass_obj
 def list(config):
-    """Show the available HammerBlade instances.
+    """Show the available instances.
     """
     for inst in get_instances(config):
         print(fmt_inst(config, inst))
@@ -351,7 +351,7 @@ def list(config):
 @click.option('--terminate/--stop', default=False,
               help='Destroy the instance, or just stop it (the default).')
 def stop(config, wait, terminate):
-    """Stop all running HammerBlade instances.
+    """Stop all running instances.
     """
     for inst in get_instances(config):
         iid = inst['InstanceId']
