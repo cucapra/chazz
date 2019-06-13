@@ -77,15 +77,19 @@ Or to run a specific command, pass it as an argument, as in `chazz shell 'scp so
 
 ### Configuration
 
-The [TOML][] configuration file at `~/.config/chazz.toml` supports these options:
+The [TOML][] configuration file is at `~/.config/chazz.toml`.
+This is the main option you will want to set:
 
 - `ssh_key`: Path to the SSH private key file to use when connecting to instances.
+
+You can also configure Chazz for your AWS setup (the defaults are for the Capra AWS account):
+
 - `key_name`: The name of the key pair in AWS. Chazz will attach this to any new instances it creates. It should be the key pair corresponding to the `ssh_key` file above.
 - `security_group`: The AWS security group to associate with new instances. You'll want to (manually) create a security group that allows SSH connections.
 - `default_ami`: The name (i.e., version) of the AMI to connect to and to use for new instances. This is like the `-i` command-line flag (below).
 
-There are also some other options you probably don't need to change: `aws_region`, `ec2_type`, `ami_ids`, and `user`.
-See [the default configuration][default] for an example of what a config file looks like.
+There are also some other options you probably don't need to change.
+See [the default configuration][default] for an exhaustive list and an example of what a config file looks like.
 
 [toml]: https://github.com/toml-lang/toml
 [default]: https://github.com/cucapra/chazz/blob/master/chazz/config_default.toml

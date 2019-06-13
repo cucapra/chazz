@@ -261,7 +261,7 @@ def chazz(ctx, verbose, ami, image):
     else:
         log.setLevel(logging.INFO)
 
-    # Load the configuration from the file, overriding defaults.
+    # Load the configuration from the user's config file & defaults.
     config_opts = load_config()
 
     # Options to choose specific images.
