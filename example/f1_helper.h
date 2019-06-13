@@ -10,6 +10,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include <bsg_manycore_driver.h>
 #include <bsg_manycore_loader.h>
