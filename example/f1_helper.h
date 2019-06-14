@@ -13,6 +13,7 @@
 #include <assert.h>
 
 #include <bsg_manycore_driver.h>
+#include <bsg_manycore_tile.h>
 #include <bsg_manycore_loader.h>
 #include <bsg_manycore_mem.h>
 #include <bsg_manycore_errno.h>
@@ -163,7 +164,7 @@ void waitForKernel(uint8_t fd, int numTiles) {
 }
 
 // load kernels onto multiple cores on the hammerblade in (but don't run)
-void hammaLoadMultiple(uint8_t fd, char *manycore_program, int x1, int y1, int x2, int y2) {
+void hammaLoadMultiple(hb_mc_manycore_t mc, char *manycore_program, int x1, int y1, int x2, int y2) {
   int origin_x = x1;
   int origin_y = y1;
   for (uint8_t y = y1; y < y2; y++) {
@@ -173,20 +174,29 @@ void hammaLoadMultiple(uint8_t fd, char *manycore_program, int x1, int y1, int x
 	assert(0);
       }
 
+      hb_mc_coordinate_t coord = hb_mc_coordinate(x, y);
+      int err = hb_mc_tile_freeze(&mc, &coord);
+      if (err != HB_MC_SUCCESS) {
+          printf("freeze failed\n");
+      }
+
       // start kernel with origin
-      hb_mc_tile_freeze(fd, x, y);
-      hb_mc_tile_set_group_origin(fd, x, y, origin_x, origin_y);
-      hb_mc_load_binary(fd, manycore_program, &x, &y, 1);
+      hb_mc_tile_set_group_origin(mc, x, y, origin_x, origin_y);
+      hb_mc_load_binary(mc, manycore_program, &x, &y, 1);
     }
   }
 }
 
 // run all of the current kernels of multiple tiles
-void hammaRunMultiple(uint8_t fd, int x1, int y1, int x2, int y2) {
+void hammaRunMultiple(hb_mc_manycore_t mc, int x1, int y1, int x2, int y2) {
   // start all of the tiles
   for (int y = y1; y < y2; y++) {
     for (int x = x1; x < x2; x++) {
-      hb_mc_tile_unfreeze(fd, x, y);
+      hb_mc_coordinate_t coord = hb_mc_coordinate(x, y);
+      int err = hb_mc_tile_unfreeze(&mc, &coord);
+      if (err != HB_MC_SUCCESS) {
+          printf("unfreeze failed\n");
+      }
     }
   }
 
@@ -195,14 +205,6 @@ void hammaRunMultiple(uint8_t fd, int x1, int y1, int x2, int y2) {
   // recv a packet from each tile marking their completion
   waitForKernel(fd, num_tiles); 
 
-}
-
-// initalize the hammerblade instance
-void hammaInit(uint8_t *fd) {
-  if (hb_mc_fifo_init(fd) != HB_MC_SUCCESS) {
-    printf("failed to initialize host.\n");
-    assert(0);
-  }
 }
 
 #endif

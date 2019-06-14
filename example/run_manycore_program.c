@@ -30,12 +30,16 @@ int main(int argc, char *argv[]) {
   assert(argc == 2);
   char *manycore_program = argv[1];
 
-  // Initialize and get userspace pointer to FPGA
-  uint8_t fd;
-  hammaInit(&fd);
- 
+  // Initialize the manycore device.
+  hb_mc_manycore_t mc = {0};
+  int err = hb_mc_manycore_init(&mc, "example", 0);
+  if (err != HB_MC_SUCCESS) {
+    printf("initialization failed\n");
+    return 1;
+  }
+
   // Load SPMD program in each core 
-  hammaLoadMultiple(fd, manycore_program, X1, Y1, X2, Y2);
+  hammaLoadMultiple(mc, manycore_program, X1, Y1, X2, Y2);
     
   // Define randomly generated vectors A, B,
   // with entries in [0, 100]
