@@ -52,10 +52,8 @@ int vvadd_entry()
   // Execute vvadd for just this tile's partition.
   vvadd( g_dest , g_src0 , g_src1 , size );
 
-  // each tile sends its own bsg_finish and host takes care of it
-  bsg_finish();
-
-  bsg_wait_while(1);
+  // I guess we have to synchronize to finish execution?
+  bsg_tile_group_barrier(&r_barrier, &c_barrier);
 }
 
 // The CUDA-Lite "main"?
