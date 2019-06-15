@@ -73,7 +73,7 @@ The `-w` flag uses [entr][] to watch for changes to files and automatically send
 
 For more complex interactions with a HammerBlade server, use `chazz shell`.
 You get an interactive shell with the appropriate key pre-loaded in an SSH agent and the host in an environment variable called `$HB`.
-So you can type `ssh $HB` to connect or `scp -r example $HB:` to upload files.
+So you can type `ssh $HB` to connect or `scp -r hb-examples $HB:` to upload files.
 Or to run a specific command, pass it as an argument, as in `chazz shell 'scp something.c $HB:'`.
 
 ### Configuration
