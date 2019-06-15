@@ -391,7 +391,8 @@ def sync(config, src, dest, watch):
     rsync_cmd = [
         'rsync', '--checksum', '--itemize-changes', '--recursive',
         '-e', 'ssh -i {}'.format(shlex.quote(config.ssh_key)),
-        src, '{}:{}'.format(ssh_host(config, host), dest),
+        os.path.normpath(src),
+        '{}:{}'.format(ssh_host(config, host), os.path.normpath(dest)),
     ]
 
     if watch:
