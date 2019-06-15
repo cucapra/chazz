@@ -396,15 +396,10 @@ def sync(config, src, dest, watch):
     ]
 
     if watch:
-        # Use entr(1) to watch for changes.
-        find_cmd = ['find', src]
-        entr_cmd = ['entr'] + rsync_cmd
-        log.info('{} | {}'.format(fmt_cmd(find_cmd), fmt_cmd(entr_cmd)))
-
-        find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
-        entr_proc = subprocess.Popen(entr_cmd, stdin=find_proc.stdout)
-        find_proc.stdout.close()
-        entr_proc.wait()
+        # Use `watchexec` to watch for changes.
+        we_cmd = ['watchexec', '-w', src, '--'] + rsync_cmd
+        log.info(fmt_cmd(we_cmd))
+        subprocess.run(we_cmd)
 
     else:
         # Just rsync once.
