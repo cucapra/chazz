@@ -397,7 +397,7 @@ def sync(config, src, dest, watch):
 
     if watch:
         # Use `watchexec` to watch for changes.
-        we_cmd = ['watchexec', '-w', src, '--'] + rsync_cmd
+        we_cmd = ['watchexec', '-w', src, '-n', '--'] + rsync_cmd
         log.info(fmt_cmd(we_cmd))
         subprocess.run(we_cmd)
 
