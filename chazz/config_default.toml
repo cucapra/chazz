@@ -1,7 +1,7 @@
 key_name = 'ironcheese'  # Name of the key pair to add to new instances.
 ssh_key = 'ironcheese.pem'  # Path to corresponding SSH private key.
 security_group = 'chazz'  # A security group that allows SSH.
-default_ami = 'v1.0.0'  # The AMI name to connect to and create.
+default_ami = 'v3.0.6'  # The AMI name to connect to and create.
 aws_region = 'us-west-2'  # The Oregon region.
 ec2_type = 'f1.2xlarge'  # Launch the smallest kind of F1 instance.
 user = 'centos'  # The user for SSH connections.
