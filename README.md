@@ -68,6 +68,7 @@ There is also a `chazz start` command, which is like `chazz ssh` in that it ensu
 It can get a little annoying to edit files on the VM, so Chazz can help synchronize files you edit locally.
 Type `chazz sync foo` to [rsync][] `foo` to the server.
 The `-w` flag uses [watchexec][] to watch for changes to files and automatically send them to the server.
+The `--down` flag downloads file instead of uploading them.
 
 ### Get a Shell for Typing Arbitrary SSH Commands
 

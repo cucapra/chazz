@@ -375,11 +375,13 @@ def stop(config, wait, terminate, stop_id):
 
 @chazz.command()
 @click.pass_obj
-@click.argument('src', type=click.Path(exists=True))
-@click.argument('dest', required=False, default='')
+@click.argument('local', type=click.Path(exists=True))
+@click.argument('remote', required=False, default='')
 @click.option('--watch', '-w', is_flag=True, default=False,
               help='Use entr to wait for changes and automatically sync.')
-def sync(config, src, dest, watch):
+@click.option('--down/--up', '-d/-u', default=False,
+              help='Download files (the default is to upload).')
+def sync(config, local, remote, watch, down):
     """Synchronize files with an instance.
     """
     # Get a connectable host.
@@ -391,13 +393,20 @@ def sync(config, src, dest, watch):
     rsync_cmd = [
         'rsync', '--checksum', '--itemize-changes', '--recursive',
         '-e', 'ssh -i {}'.format(shlex.quote(config.ssh_key)),
-        os.path.normpath(src),
-        '{}:{}'.format(ssh_host(config, host), os.path.normpath(dest)),
     ]
+
+    # Add the local & remote paths for synchronization.
+    local_arg = os.path.normpath(local)
+    remote_arg = '{}:{}'.format(ssh_host(config, host),
+                                os.path.normpath(remote))
+    if down:
+        rsync_cmd += [remote_arg, local_arg]
+    else:
+        rsync_cmd += [local_arg, remote_arg]
 
     if watch:
         # Use `watchexec` to watch for changes.
-        we_cmd = ['watchexec', '-w', src, '-n', '--'] + rsync_cmd
+        we_cmd = ['watchexec', '-w', local, '-n', '--'] + rsync_cmd
         log.info(fmt_cmd(we_cmd))
         subprocess.run(we_cmd)
 
