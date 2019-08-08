@@ -8,6 +8,7 @@ user = 'centos'  # The user for SSH connections.
 
 # Mapping from version names to image IDs.
 [ami_ids]
+'v3.1.0'   = 'ami-057eb9f390e3f96d8'
 'v3.0.6'   = 'ami-07f5f6996c93f543e'
 'v1.0.2'   = 'ami-09b8871cf40279e0f'
 'v1.0.0'   = 'ami-0c6849749f4551621'
