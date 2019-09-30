@@ -209,22 +209,22 @@ def get_running_instance(config, name):
         return get_instance(config.ec2, inst['InstanceId'])
 
 
-def ssh_host(config, host):
+def ssh_host(config, host, username):
     """Get the full user/host pair for use in SSH commands."""
-    return '{}@{}'.format(config.user, host)
+    return '{}@{}'.format(username or config.user, host)
 
 
-def ssh_command(config, host):
+def ssh_command(config, host, username):
     """Construct a command for SSHing into an EC2 instance.
     """
     return [
         'ssh',
         '-i', config.ssh_key,
-        ssh_host(config, host),
+        ssh_host(config, host, username),
     ]
 
 
-def run_setup(config, host):
+def run_setup(config, host, username):
     """Set up the host by copying our setup script and running it.
     """
     log.info('running setup script')
@@ -234,7 +234,7 @@ def run_setup(config, host):
         setup_script = f.read()
 
     # Pipe the command into sh on the host.
-    sh_cmd = ssh_command(config, host) + ['sh']
+    sh_cmd = ssh_command(config, host, username) + ['sh']
     log.debug(fmt_cmd(sh_cmd))
     subprocess.run(sh_cmd, input=setup_script)
 
@@ -310,8 +310,9 @@ def chazz(ctx, verbose, ami, image):
 
 @chazz.command()
 @click.pass_obj
+@click.option('--username', '-u', default=None)
 @click.option('--name', '-n', default=None)
-def ssh(config, name):
+def ssh(config, username, name):
     """Connect to an instance with SSH.
     """
     inst = get_running_instance(config, name)
@@ -321,10 +322,10 @@ def ssh(config, name):
     host_wait(host, SSH_PORT)
 
     # Set up the VM.
-    run_setup(config, host)
+    run_setup(config, host, username)
 
     # Run the interactive SSH command.
-    cmd = ssh_command(config, host)
+    cmd = ssh_command(config, host, username)
     log.info(fmt_cmd(cmd))
     subprocess.run(cmd)
 
@@ -332,8 +333,9 @@ def ssh(config, name):
 @chazz.command()
 @click.pass_obj
 @click.option('--name', '-n', default=None)
+@click.option('--username', '-u', default=None)
 @click.argument('cmd', required=False, default='exec "$SHELL"')
-def shell(config, cmd):
+def shell(config, name, username, cmd):
     """Launch a shell for convenient SSH invocation.
     """
     inst = get_running_instance(config, name)
@@ -344,7 +346,7 @@ def shell(config, cmd):
         'ssh-add "$HB_KEY" ; {}'.format(cmd),
     ]
     subprocess.run(cmd, env={
-        'HB': ssh_host(config, host),
+        'HB': ssh_host(config, host, username),
         'HB_HOST': host,
         'HB_KEY': os.path.abspath(config.ssh_key),
     })
@@ -411,7 +413,8 @@ def stop(config, wait, terminate, name_or_stop_id):
 @click.option('--watch', '-w', is_flag=True, default=False,
               help='Use entr to wait for changes and automatically sync.')
 @click.option('--name', '-n', default=None)
-def sync(config, src, dest, watch, name):
+@click.option('--username', '-u', default=None)
+def sync(config, src, dest, watch, name, username):
     """Synchronize files with an instance.
     """
     # Get a connectable host.
@@ -424,7 +427,7 @@ def sync(config, src, dest, watch, name):
         'rsync', '--checksum', '--itemize-changes', '--recursive',
         '-e', 'ssh -i {}'.format(shlex.quote(config.ssh_key)),
         os.path.normpath(src),
-        '{}:{}'.format(ssh_host(config, host), os.path.normpath(dest)),
+        '{}:{}'.format(ssh_host(config, host, username), os.path.normpath(dest)),
     ]
 
     if watch:
