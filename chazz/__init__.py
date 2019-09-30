@@ -35,6 +35,7 @@ click_log.basic_config(log)
 Config = namedtuple("Config", [
     'ec2',  # Boto EC2 client object.
     'ami_ids',  # Mapping from version names to AMI IDs.
+    'inst_ids', # Mapping from instance names to Instance IDs.
     'ami_default',  # Name of the default version to use.
     'ssh_key',  # Path to the SSH private key file.
     'key_name',  # The EC2 keypair name.
@@ -103,8 +104,20 @@ def get_instances(config):
     configured AMIs.
     """
     for inst in all_instances(config.ec2):
-        if inst['ImageId'] in config.ami_ids.values():
+        if inst['ImageId'] in config.ami_ids.values() or \
+                inst['InstanceId'] in config.inst_ids.values():
             yield inst
+
+def get_instance_names(ec2):
+    """Return a mapping of names for instances. The name is taken from
+    inst['Tags'] where 'Key' == 'Name'.
+    """
+    mapping = {}
+    for inst in all_instances(ec2):
+        for tag in inst['Tags']:
+            if tag['Key'] == 'Name':
+                mapping[tag['Value']] = inst['InstanceId']
+    return mapping
 
 
 def get_instance(ec2, instance_id):
@@ -154,11 +167,15 @@ def create_instance(config):
     return res['Instances'][0]
 
 
-def get_running_instance(config):
+def get_running_instance(config, name):
     """Get a *running* EC2 instance with the default AMI, starting a new
     one or booting up an old one if necessary.
     """
-    inst = get_default_instance(config)
+    if name is None:
+        inst = get_default_instance(config)
+    else:
+        assert name in config.inst_ids.keys(), 'Unknown instance name {}. Must be one of {}.'.format(name, ', '.join(config.inst_ids))
+        inst = get_instance(config.ec2, config.inst_ids[name])
 
     if inst:
         iid = inst['InstanceId']
@@ -226,8 +243,10 @@ def fmt_inst(config, inst):
     """Format an EC2 instance object as a string for display.
     """
     ami_names = {v: k for (k, v) in config.ami_ids.items()}
-    return '{0[InstanceId]} ({0[State][Name]}): {1}'.format(
-        inst,
+    inst_names = {v: k for (k, v) in config.inst_ids.items()}
+    return '{} ({}): {}'.format(
+        inst_names.get(inst['InstanceId'], inst['InstanceId']),
+        inst['State']['Name'],
         ami_names.get(inst['ImageId'], inst['ImageId']),
     )
 
@@ -271,11 +290,14 @@ def chazz(ctx, verbose, ami, image):
         ami_ids['cli'] = ami
         image = 'cli'
     elif image not in ami_ids:
-        ctx.fail('image must be one of {}'.format(', '.join(ami_ids)))
+        ctx.fail('default ami image must be one of {}. Given "{}".'.format(', '.join(ami_ids), image))
+
+    ec2 = boto3.client('ec2', region_name=config_opts['aws_region'])
 
     ctx.obj = Config(
-        ec2=boto3.client('ec2', region_name=config_opts['aws_region']),
+        ec2=ec2,
         ami_ids=ami_ids,
+        inst_ids=get_instance_names(ec2),
         ami_default=image,
         ssh_key=os.path.expanduser(config_opts['ssh_key']),
         key_name=config_opts['key_name'],
@@ -288,10 +310,11 @@ def chazz(ctx, verbose, ami, image):
 
 @chazz.command()
 @click.pass_obj
-def ssh(config):
+@click.option('--name', '-n', default=None)
+def ssh(config, name):
     """Connect to an instance with SSH.
     """
-    inst = get_running_instance(config)
+    inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
 
     # Wait for the host to start its SSH server.
@@ -308,11 +331,12 @@ def ssh(config):
 
 @chazz.command()
 @click.pass_obj
+@click.option('--name', '-n', default=None)
 @click.argument('cmd', required=False, default='exec "$SHELL"')
 def shell(config, cmd):
     """Launch a shell for convenient SSH invocation.
     """
-    inst = get_running_instance(config)
+    inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
 
     cmd = [
@@ -328,10 +352,12 @@ def shell(config, cmd):
 
 @chazz.command()
 @click.pass_obj
-def start(config):
-    """Ensure that an instance is running.
+@click.option('--name', '-n', default=None)
+def start(config, name):
+    """Ensure that an instance is running. If name is provided, ensure that
+    the named instance is running
     """
-    inst = get_running_instance(config)
+    inst = get_running_instance(config, name)
     print(fmt_inst(config, inst))
 
 
@@ -350,10 +376,15 @@ def list(config):
               help='Wait for the instances to stop.')
 @click.option('--terminate/--stop', default=False,
               help='Destroy the instance, or just stop it (the default).')
-@click.argument('stop_id', required=False, metavar='[ID]')
-def stop(config, wait, terminate, stop_id):
+@click.argument('name_or_stop_id', required=False, metavar='[ID]')
+def stop(config, wait, terminate, name_or_stop_id):
     """Stop all running instances, or one given by its ID.
     """
+    # If stop_id is a key in inst_ids, use the value for the key instead.
+    stop_id = None
+    if name_or_stop_id is not None:
+        stop_id = config.inst_ids.get(name_or_stop_id, name_or_stop_id)
+
     for inst in get_instances(config):
         iid = inst['InstanceId']
         if stop_id and iid != stop_id:
@@ -379,11 +410,12 @@ def stop(config, wait, terminate, stop_id):
 @click.argument('dest', required=False, default='')
 @click.option('--watch', '-w', is_flag=True, default=False,
               help='Use entr to wait for changes and automatically sync.')
-def sync(config, src, dest, watch):
+@click.option('--name', '-n', default=None)
+def sync(config, src, dest, watch, name):
     """Synchronize files with an instance.
     """
     # Get a connectable host.
-    inst = get_running_instance(config)
+    inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
     host_wait(host, SSH_PORT)
 
