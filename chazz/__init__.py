@@ -63,6 +63,22 @@ def fmt_cmd(cmd):
     return ' '.join(shlex.quote(s) for s in cmd)
 
 
+def config_with_username(config, username):
+    """Return a new config with the user field set to `username`
+    """
+    return Config(
+        ec2=config.ec2,
+        ami_ids=config.ami_ids,
+        inst_ids=config.inst_ids,
+        ami_default=config.ami_default,
+        ssh_key=config.ssh_key,
+        key_name=config.key_name,
+        security_group=config.security_group,
+        ec2_type=config.ec2_type,
+        user=username,
+    )
+
+
 def test_connect(host, port, timeout=2):
     """Try connecting to `host` on `port`. Return a bool indicating
     whether the connection was successful, i.e., someone is listening on
@@ -114,9 +130,10 @@ def get_instance_names(ec2):
     """
     mapping = {}
     for inst in all_instances(ec2):
-        for tag in inst['Tags']:
-            if tag['Key'] == 'Name':
-                mapping[tag['Value']] = inst['InstanceId']
+        if inst.get('Tags'):
+            for tag in inst['Tags']:
+                if tag['Key'] == 'Name':
+                    mapping[tag['Value']] = inst['InstanceId']
     return mapping
 
 
@@ -209,22 +226,22 @@ def get_running_instance(config, name):
         return get_instance(config.ec2, inst['InstanceId'])
 
 
-def ssh_host(config, host, username):
+def ssh_host(config, host):
     """Get the full user/host pair for use in SSH commands."""
-    return '{}@{}'.format(username or config.user, host)
+    return '{}@{}'.format(config.user, host)
 
 
-def ssh_command(config, host, username):
+def ssh_command(config, host):
     """Construct a command for SSHing into an EC2 instance.
     """
     return [
         'ssh',
         '-i', config.ssh_key,
-        ssh_host(config, host, username),
+        ssh_host(config, host),
     ]
 
 
-def run_setup(config, host, username):
+def run_setup(config, host):
     """Set up the host by copying our setup script and running it.
     """
     log.info('running setup script')
@@ -234,7 +251,7 @@ def run_setup(config, host, username):
         setup_script = f.read()
 
     # Pipe the command into sh on the host.
-    sh_cmd = ssh_command(config, host, username) + ['sh']
+    sh_cmd = ssh_command(config, host) + ['sh']
     log.debug(fmt_cmd(sh_cmd))
     subprocess.run(sh_cmd, input=setup_script)
 
@@ -317,15 +334,16 @@ def ssh(config, username, name):
     """
     inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
+    user_config = config_with_username(config, username or config.user)
 
     # Wait for the host to start its SSH server.
     host_wait(host, SSH_PORT)
 
     # Set up the VM.
-    run_setup(config, host, username)
+    run_setup(user_config, host)
 
     # Run the interactive SSH command.
-    cmd = ssh_command(config, host, username)
+    cmd = ssh_command(user_config, host)
     log.info(fmt_cmd(cmd))
     subprocess.run(cmd)
 
@@ -340,15 +358,16 @@ def shell(config, name, username, cmd):
     """
     inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
+    user_config = config_with_username(config, username or config.user)
 
     cmd = [
         'ssh-agent', 'sh', '-c',
         'ssh-add "$HB_KEY" ; {}'.format(cmd),
     ]
     subprocess.run(cmd, env={
-        'HB': ssh_host(config, host, username),
+        'HB': ssh_host(user_config, host),
         'HB_HOST': host,
-        'HB_KEY': os.path.abspath(config.ssh_key),
+        'HB_KEY': os.path.abspath(user_config.ssh_key),
     })
 
 
@@ -427,7 +446,7 @@ def sync(config, src, dest, watch, name, username):
         'rsync', '--checksum', '--itemize-changes', '--recursive',
         '-e', 'ssh -i {}'.format(shlex.quote(config.ssh_key)),
         os.path.normpath(src),
-        '{}:{}'.format(ssh_host(config, host, username), os.path.normpath(dest)),
+        '{}:{}'.format(ssh_host(config, host), os.path.normpath(dest)),
     ]
 
     if watch:
