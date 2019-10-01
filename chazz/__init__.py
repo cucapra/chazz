@@ -291,7 +291,7 @@ def load_config():
 @click.option('-v', '--verbose', is_flag=True, default=False,
               help='Include debug output.')
 def chazz(ctx, verbose, ami, image):
-    """Run HammerBlade on F1."""
+    """Simplified AWS server management."""
     if verbose:
         log.setLevel(logging.DEBUG)
     else:
@@ -327,10 +327,11 @@ def chazz(ctx, verbose, ami, image):
 
 @chazz.command()
 @click.pass_obj
+@click.argument('name', required=False, metavar='[INSTANCE_ID]')
 @click.option('--username', '-u', default=None)
-@click.option('--name', '-n', default=None)
-def ssh(config, username, name):
-    """Connect to an instance with SSH.
+def ssh(config, name, username):
+    """Connect to an instance with SSH. If INSTANCE_ID is not specified,
+    find any instance with the default AMI ID and connect to it.
     """
     inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
@@ -350,11 +351,12 @@ def ssh(config, username, name):
 
 @chazz.command()
 @click.pass_obj
-@click.option('--name', '-n', default=None)
+@click.argument('name', required=False, metavar='[INSTANCE_ID]')
 @click.option('--username', '-u', default=None)
 @click.argument('cmd', required=False, default='exec "$SHELL"')
 def shell(config, name, username, cmd):
-    """Launch a shell for convenient SSH invocation.
+    """Launch a shell for convenient SSH invocation. If INSTANCE_ID is not
+    specified, find any instance with the default AMI ID.
     """
     inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
@@ -373,9 +375,9 @@ def shell(config, name, username, cmd):
 
 @chazz.command()
 @click.pass_obj
-@click.option('--name', '-n', default=None)
+@click.argument('name', required=False, metavar='[INSTANCE_ID]')
 def start(config, name):
-    """Ensure that an instance is running. If name is provided, ensure that
+    """Ensure that an instance is running. If INSTANCE_ID is provided, ensure that
     the named instance is running
     """
     inst = get_running_instance(config, name)
@@ -385,7 +387,8 @@ def start(config, name):
 @chazz.command()
 @click.pass_obj
 def list(config):
-    """Show the available instances.
+    """Show the available instances that either have one of the configured AMIs
+    or have a Tag called 'Name'.
     """
     for inst in get_instances(config):
         print(fmt_inst(config, inst))
@@ -393,18 +396,18 @@ def list(config):
 
 @chazz.command()
 @click.pass_obj
+@click.argument('name', required=False, metavar='[INSTANCE_ID]')
 @click.option('--wait/--no-wait', default=False,
               help='Wait for the instances to stop.')
 @click.option('--terminate/--stop', default=False,
               help='Destroy the instance, or just stop it (the default).')
-@click.argument('name_or_stop_id', required=False, metavar='[ID]')
-def stop(config, wait, terminate, name_or_stop_id):
+def stop(config, name, wait, terminate):
     """Stop all running instances, or one given by its ID.
     """
     # If stop_id is a key in inst_ids, use the value for the key instead.
     stop_id = None
-    if name_or_stop_id is not None:
-        stop_id = config.inst_ids.get(name_or_stop_id, name_or_stop_id)
+    if name is not None:
+        stop_id = config.inst_ids.get(name, name)
 
     for inst in get_instances(config):
         iid = inst['InstanceId']
@@ -429,12 +432,13 @@ def stop(config, wait, terminate, name_or_stop_id):
 @click.pass_obj
 @click.argument('src', type=click.Path(exists=True))
 @click.argument('dest', required=False, default='')
+@click.argument('name', required=False, metavar='[INSTANCE_ID]')
 @click.option('--watch', '-w', is_flag=True, default=False,
               help='Use entr to wait for changes and automatically sync.')
-@click.option('--name', '-n', default=None)
 @click.option('--username', '-u', default=None)
-def sync(config, src, dest, watch, name, username):
-    """Synchronize files with an instance.
+def sync(config, src, dest, name, watch, username):
+    """Synchronize files with an instance. If INSTANCE_ID is not specified,
+       find any instance with the default AMI ID and connect to it.
     """
     # Get a connectable host.
     inst = get_running_instance(config, name)
