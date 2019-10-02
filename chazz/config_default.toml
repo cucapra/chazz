@@ -20,3 +20,12 @@ user = 'centos'  # The user for SSH connections.
 '20190417' = 'ami-0270f06e16bfee050'
 '20190405' = 'ami-0ce51e94bbeba2650'
 '20190319' = 'ami-0c7ccefee8f931530'
+
+[scripts]
+setup = '''
+echo 'Loading the FPGA image.'
+sudo fpga-load-local-image -S 0 -F -I $AGFI
+
+echo 'Installing manycore libraries.'
+sudo -E make -C bsg_bladerunner/bsg_f1_*/cl_manycore/libraries/ install
+'''
