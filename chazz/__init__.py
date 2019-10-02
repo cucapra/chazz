@@ -172,6 +172,7 @@ def instance_wait(ec2, instance_id, until='instance_running'):
 def create_instance(config):
     """Create (and start) a new EC2 instance using the default AMI.
     """
+    assert config.ami_default, 'No default AMI specified. Cannot create instances.'
     res = config.ec2.run_instances(
         ImageId=config.ami_ids[config.ami_default],
         InstanceType=config.ec2_type,
@@ -300,14 +301,15 @@ def chazz(ctx, verbose, ami, image):
     # Load the configuration from the user's config file & defaults.
     config_opts = load_config()
 
-    # Options to choose specific images.
-    image = image or config_opts['default_ami']
+    # Options to choose specific images. Set to None if default_ami is not specified.
+    image = image or config_opts['default_ami'] or None
     ami_ids = dict(config_opts['ami_ids'])
     if ami:
         ami_ids['cli'] = ami
         image = 'cli'
-    elif image not in ami_ids:
-        ctx.fail('default ami image must be one of {}. Given "{}".'.format(', '.join(ami_ids), image))
+    elif image and image not in ami_ids:
+        ctx.fail(
+            'default ami image must be one of {}. Given "{}".'.format(', '.join(ami_ids), image))
 
     ec2 = boto3.client('ec2', region_name=config_opts['aws_region'])
 
