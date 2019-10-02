@@ -468,14 +468,15 @@ def sync(config, src, dest, name, watch, username):
     # Get a connectable host.
     inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
+    user_config = config_with_username(config, username or config.user)
     host_wait(host, SSH_PORT)
 
     # Concoct the rsync command.
     rsync_cmd = [
         'rsync', '--checksum', '--itemize-changes', '--recursive',
-        '-e', 'ssh -i {}'.format(shlex.quote(config.ssh_key)),
+        '-e', 'ssh -i {}'.format(shlex.quote(user_config.ssh_key)),
         os.path.normpath(src),
-        '{}:{}'.format(ssh_host(config, host), os.path.normpath(dest)),
+        '{}:{}'.format(ssh_host(user_config, host), os.path.normpath(dest)),
     ]
 
     if watch:
