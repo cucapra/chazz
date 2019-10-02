@@ -42,6 +42,7 @@ Config = namedtuple("Config", [
     'security_group',  # AWS security group (which must allow SSH).
     'ec2_type',  # EC2 instance type to create.
     'user',  # SSH username.
+    'scripts', # user defined scripts
 ])
 
 
@@ -75,6 +76,7 @@ def config_with_username(config, username):
         key_name=config.key_name,
         security_group=config.security_group,
         ec2_type=config.ec2_type,
+        scripts=config.scripts,
         user=username,
     )
 
@@ -242,19 +244,15 @@ def ssh_command(config, host):
     ]
 
 
-def run_setup(config, host):
-    """Set up the host by copying our setup script and running it.
+def run_script(config, host, scriptname):
+    """Run a script from config on host.
     """
-    log.info('running setup script')
+    assert scriptname in config.scripts, 'Script "{}" not found.'.format(scriptname)
 
-    # Read the setup script.
-    with open(SETUP_SCRIPT, 'rb') as f:
-        setup_script = f.read()
-
-    # Pipe the command into sh on the host.
+    log.info('running {}.'.format(scriptname))
     sh_cmd = ssh_command(config, host) + ['sh']
     log.debug(fmt_cmd(sh_cmd))
-    subprocess.run(sh_cmd, input=setup_script)
+    subprocess.run(sh_cmd, input=str.encode(config.scripts[scriptname]))
 
 
 def fmt_inst(config, inst):
@@ -323,14 +321,39 @@ def chazz(ctx, verbose, ami, image):
         security_group=config_opts['security_group'],
         ec2_type=config_opts['ec2_type'],
         user=config_opts['user'],
+        scripts=config_opts['scripts'],
     )
     log.debug('%s', ctx.obj)
-
 
 @chazz.command()
 @click.pass_obj
 @click.argument('name', required=False, metavar='[INSTANCE_ID]')
-@click.option('--username', '-u', default=None)
+@click.argument('commands', nargs=-1, metavar='[COMMANDS]')
+@click.option('--username', '-u', default=None, help='username for ssh command.')
+@click.option('--no-exit', '-N', is_flag=True, default=False, help="Don't exit instance after running commands.")
+def run(config, name, commands, username, no_exit):
+    """Run COMMANDS in order of specification on an instance and exit.
+    """
+    inst = get_running_instance(config, name)
+    host = inst['PublicDnsName']
+    user_config = config_with_username(config, username or config.user)
+
+    # Wait for the host to start its SSH server.
+    host_wait(host, SSH_PORT)
+
+    for command in commands:
+        run_script(user_config, host, command)
+
+    # Run the interactive SSH command.
+    if no_exit:
+        cmd = ssh_command(user_config, host)
+        log.info(fmt_cmd(cmd))
+        subprocess.run(cmd)
+
+@chazz.command()
+@click.pass_obj
+@click.argument('name', required=False, metavar='[INSTANCE_ID]')
+@click.option('--username', '-u', default=None, help='username for ssh command.')
 def ssh(config, name, username):
     """Connect to an instance with SSH. If INSTANCE_ID is not specified,
     find any instance with the default AMI ID and connect to it.
@@ -343,7 +366,7 @@ def ssh(config, name, username):
     host_wait(host, SSH_PORT)
 
     # Set up the VM.
-    run_setup(user_config, host)
+    run_script(user_config, host, 'setup')
 
     # Run the interactive SSH command.
     cmd = ssh_command(user_config, host)
@@ -354,7 +377,7 @@ def ssh(config, name, username):
 @chazz.command()
 @click.pass_obj
 @click.argument('name', required=False, metavar='[INSTANCE_ID]')
-@click.option('--username', '-u', default=None)
+@click.option('--username', '-u', default=None, help='username for ssh command.')
 @click.argument('cmd', required=False, default='exec "$SHELL"')
 def shell(config, name, username, cmd):
     """Launch a shell for convenient SSH invocation. If INSTANCE_ID is not
@@ -437,7 +460,7 @@ def stop(config, name, wait, terminate):
 @click.argument('name', required=False, metavar='[INSTANCE_ID]')
 @click.option('--watch', '-w', is_flag=True, default=False,
               help='Use entr to wait for changes and automatically sync.')
-@click.option('--username', '-u', default=None)
+@click.option('--username', '-u', default=None, help='username for ssh command.')
 def sync(config, src, dest, name, watch, username):
     """Synchronize files with an instance. If INSTANCE_ID is not specified,
        find any instance with the default AMI ID and connect to it.
