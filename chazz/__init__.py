@@ -290,7 +290,7 @@ def load_config():
 @click.option('-v', '--verbose', is_flag=True, default=False,
               help='Include debug output.')
 def chazz(ctx, verbose, ami, image):
-    """Simplified AWS server management."""
+    """Simplified AWS instance management."""
     if verbose:
         log.setLevel(logging.DEBUG)
     else:

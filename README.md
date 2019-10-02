@@ -1,5 +1,5 @@
-Chazz: A Tool for Running HammerBlade in F1
-===========================================
+Chazz: Simplified AWS instance management
+=======================================
 
 This is a little utility for interacting with HammerBlade machines running in [F1][].
 It's another [*Blades of Glory*][bog] reference.
