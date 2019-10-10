@@ -395,6 +395,7 @@ def shell(config, name, username, cmd):
         'HB': ssh_host(user_config, host),
         'HB_HOST': host,
         'HB_KEY': os.path.abspath(user_config.ssh_key),
+        **os.environ,
     })
 
 
