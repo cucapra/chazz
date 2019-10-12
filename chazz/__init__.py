@@ -474,7 +474,7 @@ def sync(config, src, dest, name, watch, username):
 
     # Concoct the rsync command.
     rsync_cmd = [
-        'rsync', '--checksum', '--itemize-changes', '--recursive',
+        'rsync', '--checksum', '--itemize-changes', '--recursive', '--copy-links',
         '-e', 'ssh -i {}'.format(shlex.quote(user_config.ssh_key)),
         os.path.normpath(src),
         '{}:{}'.format(ssh_host(user_config, host), os.path.normpath(dest)),
