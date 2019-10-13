@@ -328,11 +328,14 @@ def chazz(ctx, verbose, ami, image, user):
 @chazz.command()
 @click.pass_obj
 @click.argument('name', required=False, metavar='[INSTANCE]')
-@click.argument('commands', nargs=-1, metavar='[COMMANDS]')
+@click.argument('scripts', nargs=-1, metavar='[SCRIPTS]')
 @click.option('--no-exit', '-N', is_flag=True, default=False,
-              help="Don't exit instance after running commands.")
+              help="Don't exit instance after running scripts.")
 def run(config, name, commands, no_exit):
-    """Run COMMANDS in order of specification on an instance and exit.
+    """Run configured scripts on an instance.
+
+    SCRIPTS are the names of shell scripts from the configuration file.
+    Multiple scripts are run in the order specified.
     """
     inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
@@ -354,8 +357,11 @@ def run(config, name, commands, no_exit):
 @click.pass_obj
 @click.argument('name', required=False, metavar='[INSTANCE]')
 def ssh(config, name):
-    """Connect to an instance with SSH. Specify an instance name or ID,
-    or omit it to connect to any running instance or launch a new one.
+    """Connect to an instance with SSH.
+
+    INSTANCE may be either an instance ID or a metadata name. Omit it to
+    connect to any running instance or launch a new one if no instance
+    is running.
     """
     inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
