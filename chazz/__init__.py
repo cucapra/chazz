@@ -393,10 +393,10 @@ def shell(config, name, cmd):
         'ssh-add "$HB_KEY" ; {}'.format(cmd),
     ]
     subprocess.run(cmd, env={
+        **os.environ,
         'HB': ssh_host(config, host),
         'HB_HOST': host,
         'HB_KEY': os.path.abspath(config.ssh_key),
-        **os.environ,
     })
 
 
