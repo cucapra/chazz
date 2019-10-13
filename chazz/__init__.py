@@ -450,10 +450,14 @@ def list(config):
 def stop(config, name, wait, terminate):
     """Stop all running instances, or one given by its name or ID.
     """
-    # If stop_id is a key in inst_ids, use the value for the key instead.
+    # If `name` is specified, it can either be a name or an ID.
     stop_id = None
-    if name is not None:
-        stop_id = config.inst_ids.get(name, name)
+    if name:
+        inst = get_named_instance(config.ec2, name)
+        if inst:
+            stop_id = inst['InstanceId']
+        else:
+            stop_id = name
 
     for inst in get_instances(config):
         iid = inst['InstanceId']
