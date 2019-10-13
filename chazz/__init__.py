@@ -413,8 +413,10 @@ def start(config, name):
 @chazz.command()
 @click.pass_obj
 def list(config):
-    """Show the available instances that either have one of the configured AMIs
-    or have a Tag called 'Name'.
+    """Show the available instances.
+
+    The list includes all instances that either use one of the
+    configured AMIs or has a metadata tag "Name".
     """
     for inst in get_instances(config):
         print(fmt_inst(config, inst))
