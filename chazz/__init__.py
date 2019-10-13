@@ -101,12 +101,12 @@ def all_instances(ec2):
 
 
 def get_instances(config):
-    """Generate the current EC2 instances based on any of the
-    configured AMIs.
+    """Generate the current EC2 instances that are either based on any
+    of the configured AMIs or have matadata names.
     """
     for inst in all_instances(config.ec2):
         if inst['ImageId'] in config.ami_ids.values() or \
-                inst['InstanceId'] in config.inst_ids.values():
+                get_instance_name(inst):
             yield inst
 
 
