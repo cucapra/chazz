@@ -243,10 +243,10 @@ def run_script(config, host, scriptname):
     if scriptname not in config.scripts:
         raise click.UsageError('Script "{}" not found.'.format(scriptname))
 
-    log.info('running {}.'.format(scriptname))
+    log.info('running script {}'.format(scriptname))
     sh_cmd = ssh_command(config, host) + ['sh']
     log.debug(fmt_cmd(sh_cmd))
-    subprocess.run(sh_cmd, input=str.encode(config.scripts[scriptname]))
+    subprocess.run(sh_cmd, input=config.scripts[scriptname].encode())
 
 
 def fmt_inst(config, inst):
@@ -327,7 +327,7 @@ def chazz(ctx, verbose, ami, image, user):
 
 @chazz.command()
 @click.pass_obj
-@click.argument('name', required=False, metavar='[INSTANCE_ID]')
+@click.argument('name', required=False, metavar='[INSTANCE]')
 @click.argument('commands', nargs=-1, metavar='[COMMANDS]')
 @click.option('--no-exit', '-N', is_flag=True, default=False,
               help="Don't exit instance after running commands.")
@@ -352,10 +352,10 @@ def run(config, name, commands, no_exit):
 
 @chazz.command()
 @click.pass_obj
-@click.argument('name', required=False, metavar='[INSTANCE_ID]')
+@click.argument('name', required=False, metavar='[INSTANCE]')
 def ssh(config, name):
-    """Connect to an instance with SSH. If INSTANCE_ID is not specified,
-    find any instance with the default AMI ID and connect to it.
+    """Connect to an instance with SSH. Specify an instance name or ID,
+    or omit it to connect to any running instance or launch a new one.
     """
     inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
@@ -374,11 +374,10 @@ def ssh(config, name):
 
 @chazz.command()
 @click.pass_obj
-@click.argument('name', required=False, metavar='[INSTANCE_ID]')
+@click.argument('name', required=False, metavar='[INSTANCE]')
 @click.argument('cmd', required=False, default='exec "$SHELL"')
 def shell(config, name, cmd):
-    """Launch a shell for convenient SSH invocation. If INSTANCE_ID is not
-    specified, find any instance with the default AMI ID.
+    """Launch a shell for convenient SSH invocation.
     """
     inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
@@ -397,10 +396,9 @@ def shell(config, name, cmd):
 
 @chazz.command()
 @click.pass_obj
-@click.argument('name', required=False, metavar='[INSTANCE_ID]')
+@click.argument('name', required=False, metavar='[INSTANCE]')
 def start(config, name):
-    """Ensure that an instance is running. If INSTANCE_ID is provided, ensure that
-    the named instance is running
+    """Ensure that an instance is running.
     """
     inst = get_running_instance(config, name)
     print(fmt_inst(config, inst))
@@ -418,13 +416,13 @@ def list(config):
 
 @chazz.command()
 @click.pass_obj
-@click.argument('name', required=False, metavar='[INSTANCE_ID]')
+@click.argument('name', required=False, metavar='[INSTANCE]')
 @click.option('--wait/--no-wait', default=False,
               help='Wait for the instances to stop.')
 @click.option('--terminate/--stop', default=False,
               help='Destroy the instance, or just stop it (the default).')
 def stop(config, name, wait, terminate):
-    """Stop all running instances, or one given by its ID.
+    """Stop all running instances, or one given by its name or ID.
     """
     # If stop_id is a key in inst_ids, use the value for the key instead.
     stop_id = None
@@ -454,12 +452,11 @@ def stop(config, name, wait, terminate):
 @click.pass_obj
 @click.argument('src', type=click.Path(exists=True))
 @click.argument('dest', required=False, default='')
-@click.argument('name', required=False, metavar='[INSTANCE_ID]')
+@click.argument('name', required=False, metavar='[INSTANCE]')
 @click.option('--watch', '-w', is_flag=True, default=False,
               help='Use entr to wait for changes and automatically sync.')
 def sync(config, src, dest, name, watch):
-    """Synchronize files with an instance. If INSTANCE_ID is not specified,
-       find any instance with the default AMI ID and connect to it.
+    """Synchronize files with an instance.
     """
     # Get a connectable host.
     inst = get_running_instance(config, name)
