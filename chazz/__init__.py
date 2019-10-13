@@ -64,23 +64,6 @@ def fmt_cmd(cmd):
     return ' '.join(shlex.quote(s) for s in cmd)
 
 
-def config_with_username(config, username):
-    """Return a new config with the user field set to `username`
-    """
-    return Config(
-        ec2=config.ec2,
-        ami_ids=config.ami_ids,
-        inst_ids=config.inst_ids,
-        ami_default=config.ami_default,
-        ssh_key=config.ssh_key,
-        key_name=config.key_name,
-        security_group=config.security_group,
-        ec2_type=config.ec2_type,
-        scripts=config.scripts,
-        user=username,
-    )
-
-
 def test_connect(host, port, timeout=2):
     """Try connecting to `host` on `port`. Return a bool indicating
     whether the connection was successful, i.e., someone is listening on
@@ -296,8 +279,9 @@ def load_config():
               help='Version name for the image for connection & creation.')
 @click.option('-v', '--verbose', is_flag=True, default=False,
               help='Include debug output.')
-def chazz(ctx, verbose, ami, image):
-    """Simplified AWS instance management."""
+@click.option('--user', '-u', default=None, help='SSH username.')
+def chazz(ctx, verbose, ami, image, user):
+    """Run HammerBlade on F1."""
     if verbose:
         log.setLevel(logging.DEBUG)
     else:
@@ -332,7 +316,7 @@ def chazz(ctx, verbose, ami, image):
         key_name=config_opts['key_name'],
         security_group=config_opts['security_group'],
         ec2_type=config_opts['ec2_type'],
-        user=config_opts['user'],
+        user=user or config_opts['user'],
         scripts=config_opts['scripts'],
     )
     log.debug('%s', ctx.obj)
@@ -342,26 +326,23 @@ def chazz(ctx, verbose, ami, image):
 @click.pass_obj
 @click.argument('name', required=False, metavar='[INSTANCE_ID]')
 @click.argument('commands', nargs=-1, metavar='[COMMANDS]')
-@click.option('--username', '-u', default=None,
-              help='username for ssh command.')
 @click.option('--no-exit', '-N', is_flag=True, default=False,
               help="Don't exit instance after running commands.")
-def run(config, name, commands, username, no_exit):
+def run(config, name, commands, no_exit):
     """Run COMMANDS in order of specification on an instance and exit.
     """
     inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
-    user_config = config_with_username(config, username or config.user)
 
     # Wait for the host to start its SSH server.
     host_wait(host, SSH_PORT)
 
     for command in commands:
-        run_script(user_config, host, command)
+        run_script(config, host, command)
 
     # Run the interactive SSH command.
     if no_exit:
-        cmd = ssh_command(user_config, host)
+        cmd = ssh_command(config, host)
         log.info(fmt_cmd(cmd))
         subprocess.run(cmd)
 
@@ -369,24 +350,21 @@ def run(config, name, commands, username, no_exit):
 @chazz.command()
 @click.pass_obj
 @click.argument('name', required=False, metavar='[INSTANCE_ID]')
-@click.option('--username', '-u', default=None,
-              help='username for ssh command.')
-def ssh(config, name, username):
+def ssh(config, name):
     """Connect to an instance with SSH. If INSTANCE_ID is not specified,
     find any instance with the default AMI ID and connect to it.
     """
     inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
-    user_config = config_with_username(config, username or config.user)
 
     # Wait for the host to start its SSH server.
     host_wait(host, SSH_PORT)
 
     # Set up the VM.
-    run_script(user_config, host, 'setup')
+    run_script(config, host, 'setup')
 
     # Run the interactive SSH command.
-    cmd = ssh_command(user_config, host)
+    cmd = ssh_command(config, host)
     log.info(fmt_cmd(cmd))
     subprocess.run(cmd)
 
@@ -394,25 +372,22 @@ def ssh(config, name, username):
 @chazz.command()
 @click.pass_obj
 @click.argument('name', required=False, metavar='[INSTANCE_ID]')
-@click.option('--username', '-u', default=None,
-              help='username for ssh command.')
 @click.argument('cmd', required=False, default='exec "$SHELL"')
-def shell(config, name, username, cmd):
+def shell(config, name, cmd):
     """Launch a shell for convenient SSH invocation. If INSTANCE_ID is not
     specified, find any instance with the default AMI ID.
     """
     inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
-    user_config = config_with_username(config, username or config.user)
 
     cmd = [
         'ssh-agent', 'sh', '-c',
         'ssh-add "$HB_KEY" ; {}'.format(cmd),
     ]
     subprocess.run(cmd, env={
-        'HB': ssh_host(user_config, host),
+        'HB': ssh_host(config, host),
         'HB_HOST': host,
-        'HB_KEY': os.path.abspath(user_config.ssh_key),
+        'HB_KEY': os.path.abspath(config.ssh_key),
         **os.environ,
     })
 
@@ -479,25 +454,22 @@ def stop(config, name, wait, terminate):
 @click.argument('name', required=False, metavar='[INSTANCE_ID]')
 @click.option('--watch', '-w', is_flag=True, default=False,
               help='Use entr to wait for changes and automatically sync.')
-@click.option('--username', '-u', default=None,
-              help='username for ssh command.')
-def sync(config, src, dest, name, watch, username):
+def sync(config, src, dest, name, watch):
     """Synchronize files with an instance. If INSTANCE_ID is not specified,
        find any instance with the default AMI ID and connect to it.
     """
     # Get a connectable host.
     inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
-    user_config = config_with_username(config, username or config.user)
     host_wait(host, SSH_PORT)
 
     # Concoct the rsync command.
     rsync_cmd = [
         'rsync', '--checksum', '--itemize-changes', '--recursive',
         '--copy-links',
-        '-e', 'ssh -i {}'.format(shlex.quote(user_config.ssh_key)),
+        '-e', 'ssh -i {}'.format(shlex.quote(config.ssh_key)),
         os.path.normpath(src),
-        '{}:{}'.format(ssh_host(user_config, host), os.path.normpath(dest)),
+        '{}:{}'.format(ssh_host(config, host), os.path.normpath(dest)),
     ]
 
     if watch:
