@@ -35,14 +35,14 @@ click_log.basic_config(log)
 Config = namedtuple("Config", [
     'ec2',  # Boto EC2 client object.
     'ami_ids',  # Mapping from version names to AMI IDs.
-    'inst_ids', # Mapping from instance names to Instance IDs.
+    'inst_ids',  # Mapping from instance names to Instance IDs.
     'ami_default',  # Name of the default version to use.
     'ssh_key',  # Path to the SSH private key file.
     'key_name',  # The EC2 keypair name.
     'security_group',  # AWS security group (which must allow SSH).
     'ec2_type',  # EC2 instance type to create.
     'user',  # SSH username.
-    'scripts', # user defined scripts
+    'scripts',  # Scripts for `run`, and a special `setup` script.
 ])
 
 
@@ -126,6 +126,7 @@ def get_instances(config):
                 inst['InstanceId'] in config.inst_ids.values():
             yield inst
 
+
 def get_instance_names(ec2):
     """Return a mapping of names for instances. The name is taken from
     inst['Tags'] where 'Key' == 'Name'.
@@ -174,7 +175,8 @@ def instance_wait(ec2, instance_id, until='instance_running'):
 def create_instance(config):
     """Create (and start) a new EC2 instance using the default AMI.
     """
-    assert config.ami_default, 'No default AMI specified. Cannot create instances.'
+    assert config.ami_default, \
+        'No default AMI specified. Cannot create instances.'
     res = config.ec2.run_instances(
         ImageId=config.ami_ids[config.ami_default],
         InstanceType=config.ec2_type,
@@ -194,7 +196,11 @@ def get_running_instance(config, name):
     if name is None:
         inst = get_default_instance(config)
     else:
-        assert name in config.inst_ids.keys(), 'Unknown instance name {}. Must be one of {}.'.format(name, ', '.join(config.inst_ids))
+        assert name in config.inst_ids.keys(), \
+            'Unknown instance name {}. Must be one of {}.'.format(
+                name,
+                ', '.join(config.inst_ids),
+            )
         inst = get_instance(config.ec2, config.inst_ids[name])
 
     if inst:
@@ -247,7 +253,8 @@ def ssh_command(config, host):
 def run_script(config, host, scriptname):
     """Run a script from config on host.
     """
-    assert scriptname in config.scripts, 'Script "{}" not found.'.format(scriptname)
+    assert scriptname in config.scripts, \
+        'Script "{}" not found.'.format(scriptname)
 
     log.info('running {}.'.format(scriptname))
     sh_cmd = ssh_command(config, host) + ['sh']
@@ -299,7 +306,8 @@ def chazz(ctx, verbose, ami, image):
     # Load the configuration from the user's config file & defaults.
     config_opts = load_config()
 
-    # Options to choose specific images. Set to None if default_ami is not specified.
+    # Options to choose specific images. Set to None if `default_ami` is
+    # not specified.
     image = image or config_opts['default_ami'] or None
     ami_ids = dict(config_opts['ami_ids'])
     if ami:
@@ -307,7 +315,11 @@ def chazz(ctx, verbose, ami, image):
         image = 'cli'
     elif image and image not in ami_ids:
         ctx.fail(
-            'default ami image must be one of {}. Given "{}".'.format(', '.join(ami_ids), image))
+            'default ami image must be one of {}. Given "{}".'.format(
+                ', '.join(ami_ids),
+                image,
+            )
+        )
 
     ec2 = boto3.client('ec2', region_name=config_opts['aws_region'])
 
@@ -325,12 +337,15 @@ def chazz(ctx, verbose, ami, image):
     )
     log.debug('%s', ctx.obj)
 
+
 @chazz.command()
 @click.pass_obj
 @click.argument('name', required=False, metavar='[INSTANCE_ID]')
 @click.argument('commands', nargs=-1, metavar='[COMMANDS]')
-@click.option('--username', '-u', default=None, help='username for ssh command.')
-@click.option('--no-exit', '-N', is_flag=True, default=False, help="Don't exit instance after running commands.")
+@click.option('--username', '-u', default=None,
+              help='username for ssh command.')
+@click.option('--no-exit', '-N', is_flag=True, default=False,
+              help="Don't exit instance after running commands.")
 def run(config, name, commands, username, no_exit):
     """Run COMMANDS in order of specification on an instance and exit.
     """
@@ -350,10 +365,12 @@ def run(config, name, commands, username, no_exit):
         log.info(fmt_cmd(cmd))
         subprocess.run(cmd)
 
+
 @chazz.command()
 @click.pass_obj
 @click.argument('name', required=False, metavar='[INSTANCE_ID]')
-@click.option('--username', '-u', default=None, help='username for ssh command.')
+@click.option('--username', '-u', default=None,
+              help='username for ssh command.')
 def ssh(config, name, username):
     """Connect to an instance with SSH. If INSTANCE_ID is not specified,
     find any instance with the default AMI ID and connect to it.
@@ -377,7 +394,8 @@ def ssh(config, name, username):
 @chazz.command()
 @click.pass_obj
 @click.argument('name', required=False, metavar='[INSTANCE_ID]')
-@click.option('--username', '-u', default=None, help='username for ssh command.')
+@click.option('--username', '-u', default=None,
+              help='username for ssh command.')
 @click.argument('cmd', required=False, default='exec "$SHELL"')
 def shell(config, name, username, cmd):
     """Launch a shell for convenient SSH invocation. If INSTANCE_ID is not
@@ -461,7 +479,8 @@ def stop(config, name, wait, terminate):
 @click.argument('name', required=False, metavar='[INSTANCE_ID]')
 @click.option('--watch', '-w', is_flag=True, default=False,
               help='Use entr to wait for changes and automatically sync.')
-@click.option('--username', '-u', default=None, help='username for ssh command.')
+@click.option('--username', '-u', default=None,
+              help='username for ssh command.')
 def sync(config, src, dest, name, watch, username):
     """Synchronize files with an instance. If INSTANCE_ID is not specified,
        find any instance with the default AMI ID and connect to it.
@@ -474,7 +493,8 @@ def sync(config, src, dest, name, watch, username):
 
     # Concoct the rsync command.
     rsync_cmd = [
-        'rsync', '--checksum', '--itemize-changes', '--recursive', '--copy-links',
+        'rsync', '--checksum', '--itemize-changes', '--recursive',
+        '--copy-links',
         '-e', 'ssh -i {}'.format(shlex.quote(user_config.ssh_key)),
         os.path.normpath(src),
         '{}:{}'.format(ssh_host(user_config, host), os.path.normpath(dest)),
