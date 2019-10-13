@@ -110,16 +110,26 @@ def get_instances(config):
             yield inst
 
 
+def get_instance_name(inst):
+    """Get the name of an instance, or None if it doesn't have one.
+
+    The name is the value for the metadata tag "Name," if it exists.
+    """
+    if inst.get('Tags'):
+        for tag in inst['Tags']:
+            if tag['Key'] == 'Name':
+                return tag['Value']
+    return None
+
+
 def get_instance_names(ec2):
-    """Return a mapping of names for instances. The name is taken from
-    inst['Tags'] where 'Key' == 'Name'.
+    """Return a mapping of names for instances.
     """
     mapping = {}
     for inst in all_instances(ec2):
-        if inst.get('Tags'):
-            for tag in inst['Tags']:
-                if tag['Key'] == 'Name':
-                    mapping[tag['Value']] = inst['InstanceId']
+        name = get_instance_name(inst)
+        if name:
+            mapping[name] = inst['InstanceId']
     return mapping
 
 
@@ -253,9 +263,8 @@ def fmt_inst(config, inst):
     """Format an EC2 instance object as a string for display.
     """
     ami_names = {v: k for (k, v) in config.ami_ids.items()}
-    inst_names = {v: k for (k, v) in config.inst_ids.items()}
     return '{} ({}): {}'.format(
-        inst_names.get(inst['InstanceId'], inst['InstanceId']),
+        get_instance_name(inst) or inst['InstanceId'],
         inst['State']['Name'],
         ami_names.get(inst['ImageId'], inst['ImageId']),
     )
