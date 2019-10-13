@@ -158,8 +158,10 @@ def instance_wait(ec2, instance_id, until='instance_running'):
 def create_instance(config):
     """Create (and start) a new EC2 instance using the default AMI.
     """
-    assert config.ami_default, \
-        'No default AMI specified. Cannot create instances.'
+    if not config.ami_default:
+        raise click.UsageError(
+            'No default AMI specified. Cannot create instances.'
+        )
     res = config.ec2.run_instances(
         ImageId=config.ami_ids[config.ami_default],
         InstanceType=config.ec2_type,
@@ -176,15 +178,17 @@ def get_running_instance(config, name):
     """Get a *running* EC2 instance with the default AMI, starting a new
     one or booting up an old one if necessary.
     """
-    if name is None:
-        inst = get_default_instance(config)
-    else:
-        assert name in config.inst_ids.keys(), \
-            'Unknown instance name {}. Must be one of {}.'.format(
-                name,
-                ', '.join(config.inst_ids),
+    if name:
+        if name not in config.inst_ids:
+            raise click.UsageError(
+                'Unknown instance {}. Must be one of {}.'.format(
+                    name,
+                    ', '.join(config.inst_ids),
+                )
             )
         inst = get_instance(config.ec2, config.inst_ids[name])
+    else:
+        inst = get_default_instance(config)
 
     if inst:
         iid = inst['InstanceId']
@@ -236,8 +240,8 @@ def ssh_command(config, host):
 def run_script(config, host, scriptname):
     """Run a script from config on host.
     """
-    assert scriptname in config.scripts, \
-        'Script "{}" not found.'.format(scriptname)
+    if scriptname not in config.scripts:
+        raise click.UsageError('Script "{}" not found.'.format(scriptname))
 
     log.info('running {}.'.format(scriptname))
     sh_cmd = ssh_command(config, host) + ['sh']
@@ -299,12 +303,10 @@ def chazz(ctx, verbose, ami, image, user):
         ami_ids['cli'] = ami
         image = 'cli'
     elif image and image not in ami_ids:
-        ctx.fail(
-            'default ami image must be one of {}. Given "{}".'.format(
-                ', '.join(ami_ids),
-                image,
-            )
-        )
+        ctx.fail('image must be one of {}; not {}'.format(
+            ', '.join(ami_ids),
+            image,
+        ))
 
     ec2 = boto3.client('ec2', region_name=config_opts['aws_region'])
 
