@@ -184,19 +184,28 @@ def create_instance(config):
     return res['Instances'][0]
 
 
+def get_named_instance(ec2, name):
+    """Get an instance with the metadata name `name`, or None if no such
+    named instance exists.
+    """
+    for inst in all_instances(ec2):
+        if get_instance_name(inst) == name:
+            return inst
+    return None
+
+
 def get_running_instance(config, name):
-    """Get a *running* EC2 instance with the default AMI, starting a new
-    one or booting up an old one if necessary.
+    """Get a *running* EC2 instance, starting a new one or booting up an
+    old one if necessary.
+
+    If `name` is specified, get the instance with that name, or throw a
+    `click.UserError` if it does not exist. Otherwise, look for any
+    instance with the default AMI.
     """
     if name:
-        if name not in config.inst_ids:
-            raise click.UsageError(
-                'Unknown instance {}. Must be one of {}.'.format(
-                    name,
-                    ', '.join(config.inst_ids),
-                )
-            )
-        inst = get_instance(config.ec2, config.inst_ids[name])
+        inst = get_named_instance(config.ec2, name)
+        if not inst:
+            raise click.UsageError('Instance {} not found.'.format(name))
     else:
         inst = get_default_instance(config)
 
@@ -340,7 +349,7 @@ def chazz(ctx, verbose, ami, image, user):
 @click.argument('scripts', nargs=-1, metavar='[SCRIPTS]')
 @click.option('--no-exit', '-N', is_flag=True, default=False,
               help="Don't exit instance after running scripts.")
-def run(config, name, commands, no_exit):
+def run(config, name, scripts, no_exit):
     """Run configured scripts on an instance.
 
     SCRIPTS are the names of shell scripts from the configuration file.
@@ -352,8 +361,8 @@ def run(config, name, commands, no_exit):
     # Wait for the host to start its SSH server.
     host_wait(host, SSH_PORT)
 
-    for command in commands:
-        run_script(config, host, command)
+    for script in scripts:
+        run_script(config, host, script)
 
     # Run the interactive SSH command.
     if no_exit:
@@ -369,8 +378,8 @@ def ssh(config, name):
     """Connect to an instance with SSH.
 
     INSTANCE may be either an instance ID or a metadata name. Omit it to
-    connect to any running instance or launch a new one if no instance
-    is running.
+    connect to a running instance with the default AMI or launch a new
+    one if no instance is running.
     """
     inst = get_running_instance(config, name)
     host = inst['PublicDnsName']
