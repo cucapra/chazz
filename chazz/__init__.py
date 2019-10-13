@@ -35,7 +35,6 @@ click_log.basic_config(log)
 Config = namedtuple("Config", [
     'ec2',  # Boto EC2 client object.
     'ami_ids',  # Mapping from version names to AMI IDs.
-    'inst_ids',  # Mapping from instance names to Instance IDs.
     'ami_default',  # Name of the image to boot, or None to disable creation.
     'ssh_key',  # Path to the SSH private key file.
     'key_name',  # The EC2 keypair name.
@@ -120,17 +119,6 @@ def get_instance_name(inst):
             if tag['Key'] == 'Name':
                 return tag['Value']
     return None
-
-
-def get_instance_names(ec2):
-    """Return a mapping of names for instances.
-    """
-    mapping = {}
-    for inst in all_instances(ec2):
-        name = get_instance_name(inst)
-        if name:
-            mapping[name] = inst['InstanceId']
-    return mapping
 
 
 def get_instance(ec2, instance_id):
@@ -331,7 +319,6 @@ def chazz(ctx, verbose, ami, image, user):
     ctx.obj = Config(
         ec2=ec2,
         ami_ids=ami_ids,
-        inst_ids=get_instance_names(ec2),
         ami_default=image,
         ssh_key=os.path.expanduser(config_opts['ssh_key']),
         key_name=config_opts['key_name'],
