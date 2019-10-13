@@ -36,7 +36,7 @@ Config = namedtuple("Config", [
     'ec2',  # Boto EC2 client object.
     'ami_ids',  # Mapping from version names to AMI IDs.
     'inst_ids',  # Mapping from instance names to Instance IDs.
-    'ami_default',  # Name of the default version to use.
+    'ami_default',  # Name of the image to boot, or None to disable creation.
     'ssh_key',  # Path to the SSH private key file.
     'key_name',  # The EC2 keypair name.
     'security_group',  # AWS security group (which must allow SSH).
@@ -290,8 +290,9 @@ def chazz(ctx, verbose, ami, image, user):
     # Load the configuration from the user's config file & defaults.
     config_opts = load_config()
 
-    # Options to choose specific images. Set to None if `default_ami` is
-    # not specified.
+    # Options to choose specific images. The image (i.e.,
+    # `config.ami_default`) is necessary to support instance *creation*;
+    # when it's None, we can only interact with existing instances.
     image = image or config_opts['default_ami'] or None
     ami_ids = dict(config_opts['ami_ids'])
     if ami:
