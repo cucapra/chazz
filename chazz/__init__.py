@@ -240,6 +240,7 @@ def ssh_command(config, host):
     return [
         'ssh',
         '-i', config.ssh_key,
+        '-o', '"StrictHostKeyChecking no"',
         ssh_host(config, host),
     ]
 
