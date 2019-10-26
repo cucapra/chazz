@@ -37,6 +37,7 @@ Config = namedtuple("Config", [
     'ami_ids',  # Mapping from version names to AMI IDs.
     'ami_default',  # Name of the image to boot, or None to disable creation.
     'ssh_key',  # Path to the SSH private key file.
+    'ssh_opts', # Additional options for ssh commands.
     'key_name',  # The EC2 keypair name.
     'security_group',  # AWS security group (which must allow SSH).
     'ec2_type',  # EC2 instance type to create.
@@ -240,7 +241,7 @@ def ssh_command(config, host):
     return [
         'ssh',
         '-i', config.ssh_key,
-        '-o', 'StrictHostKeyChecking no',
+        *config.ssh_opts,
         ssh_host(config, host),
     ]
 
@@ -322,6 +323,7 @@ def chazz(ctx, verbose, ami, image, user):
         ami_ids=ami_ids,
         ami_default=image,
         ssh_key=os.path.expanduser(config_opts['ssh_key']),
+        ssh_opts=config_opts['ssh_opts'],
         key_name=config_opts['key_name'],
         security_group=config_opts['security_group'],
         ec2_type=config_opts['ec2_type'],
