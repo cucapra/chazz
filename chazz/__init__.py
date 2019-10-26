@@ -215,6 +215,13 @@ def get_running_instance(config, name):
             # "Refresh" the instance so we have its hostname.
             return get_instance(config.ec2, iid)
 
+        elif inst['State']['Code'] == State.PENDING:
+            log.info('instance is pending; waiting for instance to start')
+            instance_wait(config.ec2, iid)
+
+            # "Refresh" the instance so we have its hostname.
+            return get_instance(config.ec2, iid)
+
         else:
             raise NotImplementedError(
                 "instance in unhandled state: {}".format(inst['State']['Name'])
