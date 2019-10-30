@@ -433,8 +433,9 @@ def list(config):
     The list includes all instances that either use one of the
     configured AMIs or has a metadata tag "Name".
     """
-    for inst in get_instances(config):
-        print(fmt_inst(config, inst))
+    all_insts = sorted([ fmt_inst(config, inst) for inst in get_instances(config) ])
+    for inst in all_insts:
+        print(inst)
 
 
 @chazz.command()
