@@ -358,6 +358,9 @@ def run(config, name, scripts, no_exit):
     # Wait for the host to start its SSH server.
     host_wait(host, SSH_PORT)
 
+    # Always run the setup script
+    run_script(config, host, 'setup')
+
     for script in scripts:
         run_script(config, host, script)
 
