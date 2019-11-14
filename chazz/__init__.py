@@ -420,12 +420,13 @@ def shell(config, name, cmd):
 
 @chazz.command()
 @click.pass_obj
-@click.argument('name', required=False, metavar='[INSTANCE]')
-def start(config, name):
+@click.argument('names', nargs=-1, metavar='[INSTANCES]')
+def start(config, names):
     """Ensure that an instance is running.
     """
-    inst = get_running_instance(config, name)
-    print(fmt_inst(config, inst))
+    for name in names:
+        inst = get_running_instance(config, name)
+        print(fmt_inst(config, inst))
 
 
 @chazz.command()
@@ -443,26 +444,32 @@ def list(config):
 
 @chazz.command()
 @click.pass_obj
-@click.argument('name', required=False, metavar='[INSTANCE]')
+@click.argument('names', nargs=-1, metavar='[INSTANCES]')
 @click.option('--wait/--no-wait', default=False,
               help='Wait for the instances to stop.')
 @click.option('--terminate/--stop', default=False,
               help='Destroy the instance, or just stop it (the default).')
-def stop(config, name, wait, terminate):
+@click.option('--all', default=False, is_flag=True,
+              help='Stop all machines.')
+def stop(config, names, wait, terminate, all):
     """Stop all running instances, or one given by its name or ID.
     """
     # If `name` is specified, it can either be a name or an ID.
-    stop_id = None
-    if name:
+    stop_ids = set()
+    for name in names:
         inst = get_named_instance(config.ec2, name)
         if inst:
-            stop_id = inst['InstanceId']
+            stop_ids.add(inst['InstanceId'])
         else:
-            stop_id = name
+            stop_ids.add(name)
+
+    if not stop_ids and not all:
+        log.info('Stop invoked without instance id. Use flag --all if intended to stop all machines')
+        return
 
     for inst in get_instances(config):
         iid = inst['InstanceId']
-        if stop_id and iid != stop_id:
+        if stop_ids and iid not in stop_ids:
             continue
 
         if terminate:
